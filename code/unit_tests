@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb 12 12:10:32 2021
+
+@author: brachuno
+"""
+
+# packages
+import os, sys
+sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
+
+import datetime
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from wrtools import *
+# test the demand functions
+
+
+# utility testing
+
+ut = Utility('ut',0.01)
+ut.add_option('abc',1000,2,50,500000)
+ut.add_option('def',500,2,50,300000)
+ut.add_option('ghi',500,2,50,200000)
+ut.calculate_monthly_cost()
+ut.get_cheapest_monthly(200)
+
+
+# conservation cost testing
+ut.set_fixed_charge(5)
+ut.set_tier_prices([1,2])
+ut.set_tiers([5,99999999])
+
+ut.get_bill(0) #5
+ut.get_bill(1) #6
+ut.get_bill(6) #12
+
+ut.get_bill(3) # 8
+ut.get_bill(6) # 12
+ut.get_bill(9) # 18
+ut.get_bill(12) # 24
+
+ut.get_bill(2.75) # 7.75
+ut.get_bill(5.75) # 11.5
+ut.get_bill(8.75) # 17.5
+ut.get_bill(11.75) # 23.5
+
+# now make a city
+city = City(0,0.1)
+populations=[10,10,10,10]
+income = [100,200,300,400]
+sizes = [1,1,1,1]
+
+leaks = [0,0,0,0]
+
+city.set_bins(populations,income,sizes,leaks)
+
+
+# now check get_class_demands
+city.get_class_demands(100)
+# should be 2820,2940,3060,3180
+
+# check
+city.get_class_demands() # should be all 3s
+city.get_total_household_demands() #should be 3,6,9,12
+city.get_total_demand_by_class() # 30,60,90,120
+
+city.get_utility_demand() # should be 300
+
+# now check the calculate cost of conservation EVEN function
+ut.calculate_cost_of_conservation_EVEN_by_household(10,city)
+ # should be 17.5
+
+# check dropping: assume we need 450, select the cheapest (2) and then add it
+# to pending
+
+ut.options
+cheapest_index= ut.get_cheapest_monthly(450)
+ut.choose_option(cheapest_index, 5)
+
+ut.options
+ut.pending
+
+# now check to see if we get it at the right time
+ut.check_pending(4) # should return false
+ut.check_pending(6) # should return false
+ut.check_pending(7) # should return a row  and remove it from pending
+
+# VALIDATE BASELINE DEMAND AGAINST
+# get my baseline demand
+baseline_demand = pd.read_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/data/household_data/city_of_sacramento_processed_drought_2015.csv")
+# units are GPCD
+
+# initialize my dataframe of outputs
+outputs = pd.DataFrame(columns=['Date','demand','surface','ground',
+                               'level', 'deficit','release','restriction','trigger'])
+
+outputs['Date'] = pd.to_datetime(inflows_set['date'],format="%Y-%m-%d", errors = 'coerce')
+outputs['month'] = pd.DatetimeIndex(outputs['Date']).month
+
+# n is a row index that records how many weeks we've done this for
+#(needed because the looping below is by month, then by week )
+n = -1
+
+# okay let's go through our simulation
+# ending date currently is defined by just a 'number of rows'
+# each row in the data is a week
+
+LENGTH = 12*5 # length is in months
+
+# all of my data is created in the other R script, so the dates should be the
+# same.
+
+# adding a loop here to do multiple scenarios when that's important in the future
+#for s in range(SCENARIOS):
+s=0
+
+# pull out the 's'th column of each dataset
+inflows = pd.DataFrame(inflows_set.iloc[0:,s])
+inflows['Date'] = inflows_set['date']
+inflows.columns = ["inflow","Date"]
+inflows['Date'] = pd.to_datetime(inflows['Date'],format="%Y-%m-%d", errors = 'coerce')
+
+groundwaters = pd.DataFrame(groundwater_set.iloc[0:,s])
+groundwaters['Date'] = groundwater_set['date']
+groundwaters.columns = ['volume','Date']
+groundwaters['Date']= pd.to_datetime(groundwaters['Date'],format="%Y-%m-%d", errors = 'coerce')
+
+# initialize my flows
+inflow = Inflow(inflows['inflow'].iloc[0])
+
+# do the same for groudwater
+groundwater = GroundWater(groundwaters['volume'].iloc[0])
+
+# now for my cities
+city = City(1,0.3)
+
+#change reservoir size and set volume
+reservoir = Reservoir(52) # unit is MG
+reservoir.set_volume(52/2)
+
+# define a demand function
+# define all my demand data
+# we are going to define a series of bins,the ith location
+# in each vector has the population, househodl size, income, and leakage
+# volumes for eachpopulation
+
+populations = [22270,39529,43426,61799,97988,76275,96847,47323]
+income = [12500,17250,30000,42500,62500,87500,125000,175000]
+#household_sizes = [2.91,2.91,2.91,2.91,2.91,2.91,2.91,2.91]
+household_sizes = [1,1,1,1,1,1,1,1]
+#TODO: update these
+# sizes are estimated based on a simple regression
+# using the data provided in the income historical tables.
+# because the ACS doesn't report those specifically
+
+leakages = [.1,.1,.1,.1,.1,.1,.1,.1]
+
+# now add these to the city object
+
+city.set_bins(populations,income,household_sizes,leakages)
+
+# fInitial demand is 158 GPCD from table 5-3 in UWMP
+# daily demands
+
+# define a utility
+ut = Utility("utility",0.03)
+ut.add_option("res1",5000,60,60,10000)
+ut.add_option("res2",10000,60,60,20000)
+ut.add_option("res3",10000,30,60,21000)
+
+# add a drought option in california, the drought was a
+# 25% reduction which lasted a year
+
+ut.set_fixed_charge(29.52)
+ut.set_tier_prices([1.2055])
+ut.set_tiers([999999])# set an upper limit
+# we do this for every month
+pp=[]
+for m in range(12):
+
+    # set my date
+    this_date = outputs['Date'].iloc[m]
+    this_month = outputs['month'].iloc[m]
+
+
+    this_baseline = baseline_demand['mean'].loc[baseline_demand['reporting_month'].eq(this_month)]
+    pp.append(city.get_utility_demand(np.array(this_baseline))/1000000)
+
+plt.plot(pp)
+plt.xlabel('month')
+plt.ylabel('Systemwide Monthly MG')
+plt.hlines(1377, 0,12,color="orange",linestyle="dashed")

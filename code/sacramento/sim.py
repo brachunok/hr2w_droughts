@@ -36,15 +36,22 @@
 
 # packages
 import os, sys
-sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
+#sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
 
 import datetime
 import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 from wrtools import *
 # if wrtools isn't found, make sure the code dir is inthe path
+
+# define our relative path base
+repo_home = Path("./").absolute().parents[1]
+# ^^ may not work if you are runnign interactively. Should work if you run the script all as once
+# i.e. click 'run' vs running line by line
+
 
 # threshold for making an economic decision
 RES_THRESHOLD = 0.25
@@ -52,14 +59,14 @@ YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
 PED= 0.41  # the mean values of their analysis
 
 # read in the input data
-input_data = pd.read_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/data/sacramento_inputs_drought.csv")
+input_data = pd.read_csv(repo_home / 'data'/'sacramento'/'sacramento_inputs_drought.csv')
 # ALL DATA IN INPUT DATA IS MILLIONGALLONS/MONTH
 
 # convert the input data date
 input_data['date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
 
 # get my baseline demand
-baseline_demand = pd.read_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/data/household_data/city_of_sacramento_processed.csv")
+baseline_demand = pd.read_csv(repo_home / 'data'/'sacramento'/"city_of_sacramento_processed.csv")
 # units are GPCD`
 
 # initialize my dataframe of outputs
@@ -325,6 +332,6 @@ for m in range(outputs['Date'].count()):
     else:
         decision_trigger = False
 # record the outputs
-outputs.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/outputs.csv")
+outputs.to_csv(repo_home / 'outputs'/'sacramento'/"outputs.csv")
 hh_demand.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/hh_demand.csv")
 hh_bills.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/hh_bills.csv")

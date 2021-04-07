@@ -18,11 +18,6 @@
     # based on how groups change vs MHI (ie a 5% reduction for a group below)
     # MHI reduces their demand by X---> DONE
 
-# (2) make a utility class with infrastructure options as methods.
-    # there needs to be a big list of potential infrastructure options
-    # and a function which picks the cheapest option among them
-    # including conservation
-# (3) make sure my TVM is correct for monthly payments
 
 # (4) see how conservation was calculated --> was it a reduction by person
     # or by residence?
@@ -41,15 +36,22 @@
 
 # packages
 import os, sys
-sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
+#sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
 
 import datetime
 import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 from wrtools import *
 # if wrtools isn't found, make sure the code dir is inthe path
+
+# define our relative path base
+repo_home = Path("./").absolute().parents[1]
+# ^^ may not work if you are runnign interactively. Should work if you run the script all as once
+# i.e. click 'run' vs running line by line
+
 
 # threshold for making an economic decision
 RES_THRESHOLD = 0.25
@@ -57,14 +59,14 @@ YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
 PED= 0.41  # the mean values of their analysis
 
 # read in the input data
-input_data = pd.read_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/data/sacramento_inputs_drought.csv")
+input_data = pd.read_csv(repo_home / 'data'/'sacramento'/'sacramento_inputs_drought.csv')
 # ALL DATA IN INPUT DATA IS MILLIONGALLONS/MONTH
 
 # convert the input data date
 input_data['date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
 
 # get my baseline demand
-baseline_demand = pd.read_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/data/household_data/city_of_sacramento_processed.csv")
+baseline_demand = pd.read_csv(repo_home / 'data'/'sacramento'/"city_of_sacramento_processed.csv")
 # units are GPCD`
 
 # initialize my dataframe of outputs
@@ -166,8 +168,8 @@ conservation_fraction = 0
 percentage_change_quantity = 0
 
 # we do this for every month
-for m in range(outputs['Date'].count()):
-
+#for m in range(outputs['Date'].count()):
+for m in range(3):
     # set my date
     this_date = outputs['Date'].iloc[m]
     this_month = outputs['month'].iloc[m]
@@ -211,8 +213,8 @@ for m in range(outputs['Date'].count()):
         #ut.set_tier_prices([ut.prices[0]+unit_cost_increase])
 
     # regardless of what we've done, record the bill structure
-    outputs['fixedCharge'].iloc[m] = ut.fixed_charge
-    outputs['conserveStatus'].iloc[m] = conservation_fraction
+    outputs.loc[outputs.index==m,'fixedCharge']=ut.fixed_charge
+    outputs.loc[outputs.index==m,'conserveStatus'] = conservation_fraction
 
     # if last month's price is this month's price, do nothing
 
@@ -236,12 +238,12 @@ for m in range(outputs['Date'].count()):
     #^^ This is very hacky but it works. The index at the end someone needs to always get the ith value.
     # not just the first. Maybe fixibale by re-indexing but this shoud be airtight for now.
 
-    outputs['pedReduction'].iloc[m] = percentage_change_quantity
+    outputs.loc[outputs.index==m,'pedReduction'] = percentage_change_quantity
     ut.demand = city.get_utility_demand(this_baseline)/1000000 + other_demand['other'].iloc[m]
     # this is setting the utility demand in MG
 
     # write the demand
-    outputs['baselineDemand'].iloc[m] = ut.demand
+    outputs.loc[outputs.index==m,'baselineDemand'] = ut.demand
 
     #Record demand for an average house from each class
     # update demand
@@ -260,12 +262,12 @@ for m in range(outputs['Date'].count()):
     # INFLOWS AND SURFACE WATER NEED TO BE MONTHLY TOTALS
 
     # record inflows
-    outputs['surface'].iloc[m] = this_inflow.to_numpy()[0]
+    outputs.loc[outputs.index==m,'surface']= this_inflow.to_numpy()[0]
 
     # udpate groundwater flow
     this_ground = groundwaters['groundwater'].loc[groundwaters['date'].eq(this_date)]
     # record groundwater
-    outputs['ground'].iloc[m] = this_ground.to_numpy()[0]
+    outputs.loc[outputs.index==m,'ground'] = this_ground.to_numpy()[0]
 
     # simulate them going into the reservoir
     release =reservoir.make_sop(this_inflow,ut.demand-this_ground)
@@ -274,11 +276,11 @@ for m in range(outputs['Date'].count()):
     # and any reservoir adjustemnts we have to make
 
     # record release and volume
-    outputs['level'].iloc[m] = reservoir.volume
-    outputs['release'].iloc[m] = release
+    outputs.loc[outputs.index==m,'level'] = reservoir.volume
+    outputs.loc[outputs.index==m,'release'] = release
 
     # calculate and record any shortages
-    outputs['deficit'].iloc[m] = max(ut.demand-release-this_ground.to_numpy()[0],0)
+    outputs.loc[outputs.index==m,'deficit'] = max(ut.demand-release-this_ground.to_numpy()[0],0)
 
 
 
@@ -330,6 +332,6 @@ for m in range(outputs['Date'].count()):
     else:
         decision_trigger = False
 # record the outputs
-outputs.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/outputs.csv")
-hh_demand.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/hh_demand.csv")
-hh_bills.to_csv("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/outputs/hh_bills.csv")
+outputs.to_csv(repo_home / 'outputs'/'sacramento'/"outputs.csv")
+hh_demand.to_csv(repo_home / 'outputs'/'sacramento'/ "hh_demand.csv")
+hh_bills.to_csv(repo_home / 'outputs'/'sacramento'/"hh_bills.csv")

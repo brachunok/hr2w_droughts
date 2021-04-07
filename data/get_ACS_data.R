@@ -83,3 +83,10 @@ acs_df$income_bin[which(is.na(acs_df$estimate))] <- NA
 
 # now get a mean household size by income bin 
 acs_df_agg2 <- aggregate(acs_df$size,by=list(acs_df$income_bin), FUN=mean)
+
+
+# get the MHI estimate (001) per tract
+load("./california_2018_MHI_by_size.Rdata")
+totals_df <- acs_df[which(acs_df$variable=="B19019_001"),]
+plot(ecdf(totals_df$estimate))
+

@@ -18,11 +18,6 @@
     # based on how groups change vs MHI (ie a 5% reduction for a group below)
     # MHI reduces their demand by X---> DONE
 
-# (2) make a utility class with infrastructure options as methods.
-    # there needs to be a big list of potential infrastructure options
-    # and a function which picks the cheapest option among them
-    # including conservation
-# (3) make sure my TVM is correct for monthly payments
 
 # (4) see how conservation was calculated --> was it a reduction by person
     # or by residence?

@@ -1,6 +1,6 @@
 # water-equity
 
-## directory structure
+## directory folder structure
 1. 'code' contains all the simulation code necessary to 'perform runs' with subdirectories as needed
 2. 'data' is for raw input data that we don't touch
 3. 'analysis' is for scripts for making plots tables figures and probing code outputs, and storing small, clean outputs

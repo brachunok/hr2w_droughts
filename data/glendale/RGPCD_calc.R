@@ -12,3 +12,5 @@ glen <- CA %>%
     grepl("Glendale",supplier_name),
     Month > strptime("03/05/16", format = "%m/%d/%y")
   ) 
+
+r_gpcd <- mean(glen$calculated_r_gpcd)

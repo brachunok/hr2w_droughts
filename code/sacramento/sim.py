@@ -121,6 +121,7 @@ reservoir.set_volume(30000)  # how much
 
 # total number of people living in each household size (I think?)
 populations = [22270,39529,43426,61799,97988,76275,96847,47323]
+# TODO: double check all of these bins line up
 
 # sizes from the get_acs_data script
 household_sizes = [1.23,1.93,2.53,3.11,3.42,3.86,9.47,4.28]

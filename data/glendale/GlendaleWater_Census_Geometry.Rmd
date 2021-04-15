@@ -1,0 +1,117 @@
+---
+title: "Glendale Water - Census Tracts"
+author: "Cameron Tenner"
+date: "4/14/2021"
+output: html_document
+---
+
+```{r setup, include = F}
+library(knitr)
+opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)
+library(tigris)
+library(censusapi)
+library(sf)
+library(mapview)
+library(plotly)
+library(leaflet)
+
+options(
+  tigris_class = "sf",
+  tigris_use_cache = T 
+)
+```
+
+```{r}
+blockgroups <-
+  block_groups("CA", cb=F, progress_bar=F) %>% 
+  filter(
+    COUNTYFP == "037" # LA County 
+  ) %>% 
+  st_as_sf()
+
+glendale_water <- st_read("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/glendale/Water_Districts/Water_Districts.shp") %>% 
+  filter(
+    grepl("Glendale",
+          AGENCYNAME),
+    grepl("Water",
+          AGENCYNAME)
+  ) %>% 
+  st_as_sf() %>% 
+  st_transform(4269)
+
+glendale_blkgps <- 
+  blockgroups %>% 
+  #st_centroid() %>% 
+  st_join(glendale_water, join = st_intersects, left = F) %>% 
+  st_set_geometry(NULL) %>% 
+  left_join(
+    blockgroups,
+    by = "GEOID"
+  ) %>% 
+  st_as_sf() %>% 
+  select(
+    GEOID
+  )
+  
+```
+
+```{r}
+intersect_area <- st_area(st_intersection(glendale_blkgps, glendale_water))
+blkgrp_area <- st_area(glendale_blkgps)
+blkgrp_list <- glendale_blkgps$GEOID
+
+glendale_blkgps <- 
+  glendale_blkgps %>% 
+  mutate(
+    AREA = blkgrp_area,
+    INTRSCT_AREA = intersect_area,
+    PERC_INTSCT = INTRSCT_AREA / AREA * 100
+  )
+
+units(glendale_blkgps$PERC_INTSCT) <- NULL
+
+
+
+# areas <- tibble(
+#   GEOID = blkgrp_list,
+#   AREA = blkgrp_area,
+#   INTRSCT_AREA = intersect_area
+# ) %>% 
+#   mutate(
+#     PERC_INTSCT = INTRSCT_AREA / AREA * 100
+#   )
+# 
+# units(areas$PERC_INTSCT) <- NULL
+```
+
+```{r}
+m <- leaflet() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addPolygons(
+    data = glendale_water %>% st_transform("+proj=longlat +datum=WGS84"),
+    #group = ~WATERDISTRICT,
+    fillColor = "red",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~AGENCYNAME
+  ) %>% 
+  addPolygons(
+    data = glendale_blkgps %>% st_transform("+proj=longlat +datum=WGS84"),
+    #group = ~BLKGRPS,
+    fillColor = "yellow",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~PERC_INTSCT,
+    highlightOptions = highlightOptions(
+      weight=1.5,
+      opacity = 1,
+      fillOpacity = .6
+    )
+  )
+  
+m
+```

@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include = F}
 library(knitr)
-opts_chunk$set(echo = F, warning = F, message = F)
+opts_chunk$set(echo = T, warning = F, message = F)
 
 library(tidyverse)
 library(tigris)
@@ -34,10 +34,11 @@ blockgroups <-
 
 glendale_water <- st_read("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/glendale/Water_Districts/Water_Districts.shp") %>% 
   filter(
-    grepl("Glendale",
-          AGENCYNAME),
-    grepl("Water",
-          AGENCYNAME)
+    AGENCYNAME == "Glendale  City of"
+    # grepl("Glendale",
+    #       AGENCYNAME),
+    # grepl("Water",
+    #       AGENCYNAME)
   ) %>% 
   st_as_sf() %>% 
   st_transform(4269)
@@ -56,6 +57,9 @@ glendale_blkgps <-
   st_as_sf() %>% 
   select(
     GEOID
+  ) %>% 
+  filter(
+    ! GEOID %in% c("060376512014", "060376214001") # Filters out blockgroups that were selected due to an issue with geometry of glendale water district shapefile
   )
   
 ```
@@ -74,6 +78,8 @@ glendale_blkgps <-
   )
 
 units(glendale_blkgps$PERC_INTSCT) <- NULL
+
+head(glendale_blkgps)
 ```
 
 Create interactive map to visualize blockgroup-service area overlap and visually validate % intersections
@@ -82,7 +88,6 @@ m <- leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) %>% 
   addPolygons(
     data = glendale_water %>% st_transform("+proj=longlat +datum=WGS84"),
-    #group = ~WATERDISTRICT,
     fillColor = "red",
     weight = .25,
     fillOpacity = .5,
@@ -90,7 +95,6 @@ m <- leaflet() %>%
   ) %>% 
   addPolygons(
     data = glendale_blkgps %>% st_transform("+proj=longlat +datum=WGS84"),
-    #group = ~BLKGRPS,
     fillColor = "yellow",
     weight = .25,
     fillOpacity = .5,
@@ -101,6 +105,6 @@ m <- leaflet() %>%
       fillOpacity = .6
     )
   )
-  
+
 m
 ```

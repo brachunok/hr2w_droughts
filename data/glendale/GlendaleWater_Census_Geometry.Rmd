@@ -8,9 +8,7 @@ output: html_document
 ```{r setup, include = F}
 library(knitr)
 opts_chunk$set(echo = F, warning = F, message = F)
-```
 
-```{r}
 library(tidyverse)
 library(tigris)
 library(censusapi)
@@ -25,6 +23,7 @@ options(
 )
 ```
 
+Load LA County blockgroups using **tigris** package, import glendale water shapefile using **sf** package
 ```{r}
 blockgroups <-
   block_groups("CA", cb=F, progress_bar=F) %>% 
@@ -42,8 +41,11 @@ glendale_water <- st_read("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/d
   ) %>% 
   st_as_sf() %>% 
   st_transform(4269)
+```
 
-glendale_blkgps <- # This should flag all blockgroups that have any spatial overlap with glendale water district
+Create subset of Glendale blockgroups, meaning all blockgroups that have any overlap whatsoever with Glendale Water District
+```{r}
+glendale_blkgps <- 
   blockgroups %>% 
   st_join(glendale_water, join = st_intersects, left = F) %>% 
   st_set_geometry(NULL) %>% 
@@ -58,6 +60,7 @@ glendale_blkgps <- # This should flag all blockgroups that have any spatial over
   
 ```
 
+Find intersection areas using spatial functions and find the % of each blockgroup in the service area
 ```{r}
 intersect_area <- st_area(st_intersection(glendale_blkgps, glendale_water)) # area of intersection for each blockgroup
 blkgrp_area <- st_area(glendale_blkgps) # area of each blockgroup
@@ -73,6 +76,7 @@ glendale_blkgps <-
 units(glendale_blkgps$PERC_INTSCT) <- NULL
 ```
 
+Create interactive map to visualize blockgroup-service area overlap and visually validate % intersections
 ```{r}
 m <- leaflet() %>% 
   addProviderTiles(providers$CartoDB.Positron) %>% 

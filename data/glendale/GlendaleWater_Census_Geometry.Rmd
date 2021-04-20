@@ -108,3 +108,35 @@ m <- leaflet() %>%
 
 m
 ```
+
+# ```{r}
+# glendalecensus <- getCensus(
+#   name = "acs/acs1",
+#   vintage = 2019,
+#   vars = "B1901",
+#   region = "block group:*", 
+#   key =  "6c05445ae84c23e1c62fd91756d0f56f51ae94ef"
+# )
+# ```
+
+```{r}
+glendale_hh_income <- read_csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/glendale/B1901/B1901.csv") %>% 
+  separate(
+    GEO_ID,
+    c("Prefix", "GEOID"),
+    "US"
+  ) %>% 
+  filter(
+    GEOID %in% glendale_blkgps$GEOID
+  ) %>% 
+  select(
+    GEOID,
+    contains("E"),
+    -Prefix,
+    -NAME
+  )
+
+glendale_data <- glendale_blkgps %>% 
+  left_join(glendale_hh_income)
+```
+

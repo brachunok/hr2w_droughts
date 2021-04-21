@@ -12,8 +12,8 @@ census_api_key("defee5ea305745f65c3c8fd02105ae354ff653b0",install = T)
 # This is table B19019 
 #https://censusreporter.org/tables/B19019/
 # more data here: https://www.socialexplorer.com/data/ACS2017_5yr/metadata/?ds=ACS17_5yr&table=B19019
-#tables<- c("B19019")
-#acs_df <- get_acs(geography="tract",year=2018,state="California",table=tables[1])
+tables<- c("B19019")
+acs_df2 <- get_acs(geography="block_group",year=2018,state="California",table=tables[1])
 
 # save the data as an Rdata for future use
 #save(acs_df,file = "./california_2018_MHI_by_size.Rdata")

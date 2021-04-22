@@ -109,6 +109,75 @@ m <- leaflet() %>%
 m
 ```
 
+Let's try to remove the spike in blockgroups with close to 0 percent overlap, as they're likely a result of bad geometry in the Glendale Water shapefile 
+```{r}
+ggplot(glendale_blkgps, aes(x = PERC_INTSCT)) + 
+  geom_density() + 
+  xlim(0,25) + 
+  geom_vline(xintercept = 3, color = "red")
+
+```
+
+3 looks like a devent cutoff, lets see how this looks mapped
+```{r}
+m <- leaflet() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addPolygons(
+    data = glendale_water %>% st_transform("+proj=longlat +datum=WGS84"),
+    fillColor = "red",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~AGENCYNAME
+  ) %>% 
+  addPolygons(
+    data = glendale_blkgps %>% filter(PERC_INTSCT > 3) %>% st_transform("+proj=longlat +datum=WGS84"),
+    fillColor = "yellow",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~PERC_INTSCT,
+    highlightOptions = highlightOptions(
+      weight=1.5,
+      opacity = 1,
+      fillOpacity = .6
+    )
+  )
+m
+```
+
+Using my knowledge of the area, I can say with confidence that those < 10% intersect should be removed, as the overlap is enitrely unoccupied areas of the blockgroups (ex steep mountainous terrain on side of freeway, open space area, etc)
+```{r}
+glendale_blkgps_cut <- 
+  glendale_blkgps %>% 
+  filter(
+    PERC_INTSCT >= 10
+  )
+
+m <- leaflet() %>% 
+  addProviderTiles(providers$CartoDB.Positron) %>% 
+  addPolygons(
+    data = glendale_water %>% st_transform("+proj=longlat +datum=WGS84"),
+    fillColor = "red",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~AGENCYNAME
+  ) %>% 
+  addPolygons(
+    data = glendale_blkgps_cut %>% filter(PERC_INTSCT > 3) %>% st_transform("+proj=longlat +datum=WGS84"),
+    fillColor = "yellow",
+    weight = .25,
+    fillOpacity = .5,
+    label = ~PERC_INTSCT,
+    highlightOptions = highlightOptions(
+      weight=1.5,
+      opacity = 1,
+      fillOpacity = .6
+    )
+  )
+m
+```
+
+I will use these blockgroups for the remainder of the analysis
+
 # ```{r}
 # glendalecensus <- getCensus(
 #   name = "acs/acs1",
@@ -119,6 +188,7 @@ m
 # )
 # ```
 
+Now we load in income data from census table B1901, and join with the glendale blockgroups of interest. We then do some math operations to find the count of households in each income bracket
 ```{r}
 glendale_hh_income <- read_csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/glendale/B1901/B1901.csv") %>% 
   separate(
@@ -127,7 +197,7 @@ glendale_hh_income <- read_csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droug
     "US"
   ) %>% 
   filter(
-    GEOID %in% glendale_blkgps$GEOID
+    GEOID %in% glendale_blkgps_cut$GEOID
   ) %>% 
   select(
     GEOID,
@@ -136,7 +206,30 @@ glendale_hh_income <- read_csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droug
     -NAME
   )
 
-glendale_data <- glendale_blkgps %>% 
-  left_join(glendale_hh_income)
+glendale_data <- glendale_blkgps_cut %>% 
+  left_join(glendale_hh_income) %>% 
+  st_drop_geometry()
+
+# Convert census data to numeric to allow for calculations 
+glendale_data[6:21] <- sapply(glendale_data[6:21], as.numeric)
+
+# Define function for finding num households based on census data and % intersect
+fx <- function(x, y) (round(x * y / 100,0))
+
+# Mutate all census columns by multiplying by % intersect 
+glendale_data <- glendale_data %>% 
+  mutate(
+    across(
+    6:21,
+    ~ fx(.x,y=PERC_INTSCT)
+  )) %>% 
+  select(
+    - B19001_001E
+  )
+
+glendale_hh_sum <- tibble(
+  hh_income = c("5k", "12.5k", "17.5k", "22.5k", "27.5k", "32.5k", "37.5k", "42.5k", "47.5k", "55k", "67.5k", "87.5k", "112.5k", "137.5k", "175k", "250k"),
+  count = colSums(glendale_data[,5:20])
+  )
 ```
 

@@ -131,6 +131,7 @@ income = [12500,17250,30000,42500,62500,87500,125000,175000]
 ##household_sizes = [1,1,1,1,1,1,1,1]
 #household_sizes = [2.91,2.91,2.91,2.91,2.91,2.91,2.91,2.91]
 household_sizes = [1.23,1.93,2.53,3.11,3.42,3.86,9.47,4.28]
+
 # make the houshold demand dataframe
 hh_demand = pd.DataFrame(columns=income)
 hh_bills  = pd.DataFrame(columns=income)
@@ -168,8 +169,8 @@ conservation_fraction = 0
 percentage_change_quantity = 0
 
 # we do this for every month
-#for m in range(outputs['Date'].count()):
-for m in range(3):
+for m in range(outputs['Date'].count()):
+#for m in range(3):
     # set my date
     this_date = outputs['Date'].iloc[m]
     this_month = outputs['month'].iloc[m]
@@ -332,6 +333,6 @@ for m in range(3):
     else:
         decision_trigger = False
 # record the outputs
-outputs.to_csv(repo_home / 'outputs'/'sacramento'/"outputs.csv")
-hh_demand.to_csv(repo_home / 'outputs'/'sacramento'/ "hh_demand.csv")
-hh_bills.to_csv(repo_home / 'outputs'/'sacramento'/"hh_bills.csv")
+outputs.to_csv(repo_home / 'outputs'/'sacramento'/"outputsTEST.csv")
+hh_demand.to_csv(repo_home / 'outputs'/'sacramento'/ "hh_demandTEST.csv")
+hh_bills.to_csv(repo_home / 'outputs'/'sacramento'/"hh_billsTEST.csv")

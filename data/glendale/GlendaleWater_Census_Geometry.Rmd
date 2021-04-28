@@ -16,6 +16,7 @@ library(sf)
 library(mapview)
 library(plotly)
 library(leaflet)
+library(tidycensus)
 
 options(
   tigris_class = "sf",
@@ -118,7 +119,7 @@ ggplot(glendale_blkgps, aes(x = PERC_INTSCT)) +
 
 ```
 
-3 looks like a devent cutoff, lets see how this looks mapped
+3 looks like a decent cutoff, lets see how this looks mapped
 ```{r}
 m <- leaflet() %>% 
   addProviderTiles(providers$CartoDB.Positron) %>% 
@@ -162,7 +163,7 @@ m <- leaflet() %>%
     label = ~AGENCYNAME
   ) %>% 
   addPolygons(
-    data = glendale_blkgps_cut %>% filter(PERC_INTSCT > 3) %>% st_transform("+proj=longlat +datum=WGS84"),
+    data = glendale_blkgps_cut %>% filter(PERC_INTSCT >= 10) %>% st_transform("+proj=longlat +datum=WGS84"),
     fillColor = "yellow",
     weight = .25,
     fillOpacity = .5,
@@ -177,16 +178,6 @@ m
 ```
 
 I will use these blockgroups for the remainder of the analysis
-
-# ```{r}
-# glendalecensus <- getCensus(
-#   name = "acs/acs1",
-#   vintage = 2019,
-#   vars = "B1901",
-#   region = "block group:*", 
-#   key =  "6c05445ae84c23e1c62fd91756d0f56f51ae94ef"
-# )
-# ```
 
 Now we load in income data from census table B1901, and join with the glendale blockgroups of interest. We then do some math operations to find the count of households in each income bracket
 ```{r}
@@ -228,8 +219,97 @@ glendale_data <- glendale_data %>%
   )
 
 glendale_hh_sum <- tibble(
-  hh_income = c("5k", "12.5k", "17.5k", "22.5k", "27.5k", "32.5k", "37.5k", "42.5k", "47.5k", "55k", "67.5k", "87.5k", "112.5k", "137.5k", "175k", "250k"),
+  hh_income = c("7.5k", "12.5k", "17.5k", "22.5k", "27.5k", "32.5k", "37.5k", "42.5k", "47.5k", "55k", "67.5k", "87.5k", "112.5k", "137.5k", "175k", "250k"),
   count = colSums(glendale_data[,5:20])
   )
+```
+
+Define GWD Census Tracts
+```{r}
+la_tracts <- 
+  tracts("CA", cb=F, progress_bar=F) %>% 
+  filter(
+    COUNTYFP == "037" # LA County 
+  ) %>% 
+  st_as_sf() 
+
+glen_tracts <- la_tracts[st_intersects(la_tracts, glendale_water, sparse = F),] 
+
+intersect_area <- st_area(st_intersection(glen_tracts, glendale_water)) 
+area <- st_area(glen_tracts) 
+units(intersect_area) <- NULL
+units(area) <- NULL
+
+glen_tracts <- 
+  glen_tracts %>% 
+  mutate(
+    AREA = area,
+    INTRSCT_AREA = intersect_area,
+    PERC_INTSCT = INTRSCT_AREA / AREA * 100
+  ) %>% 
+  filter(
+    PERC_INTSCT > 10
+  )
+```
+
+Now load in table of interest from **tidycensus** and subset to tracts identified above
+```{r}
+income_hh_size <- get_acs(geography="tract",year=2018,state="California",table="B19019") 
+glen_income_hh_size <- income_hh_size %>% 
+  filter(
+    GEOID %in% glen_tracts$GEOID,
+    variable != "B19019_001"
+  )
+```
+
+Now we associate each variable name with the corresponding hh size 
+```{r}
+sizes <- tibble(
+  size=c(1:7),
+  varible=unique(acs_df$variable)
+)
+
+glen_income_hh_size$size <- 0
+for(i in 1:nrow(sizes)){
+  glen_income_hh_size$size[which(glen_income_hh_size$variable==sizes$varible[i])] <- sizes$size[i]
+}
+```
+
+Assign income bins to each observation
+```{r}
+glen_income_hh_size <- 
+  glen_income_hh_size %>% 
+  mutate(
+    income_bracket = case_when(
+      estimate < 10000 ~ 7.5,
+      estimate >= 10000 & estimate < 15000 ~ 12.5,
+      estimate >= 15000 & estimate < 20000 ~ 17.5,
+      estimate >= 20000 & estimate < 25000 ~ 22.5,
+      estimate >= 25000 & estimate < 30000 ~ 27.5,
+      estimate >= 30000 & estimate < 35000 ~ 32.5,
+      estimate >= 35000 & estimate < 40000 ~ 37.5,
+      estimate >= 40000 & estimate < 45000 ~ 42.5,
+      estimate >= 45000 & estimate < 50000 ~ 47.5,
+      estimate >= 50000 & estimate < 60000 ~ 55,
+      estimate >= 60000 & estimate < 75000 ~ 67.5,
+      estimate >= 75000 & estimate < 100000 ~ 87.5,
+      estimate >= 100000 & estimate < 125000 ~ 112.5,
+      estimate >= 125000 & estimate < 150000 ~ 137.5,
+      estimate >= 150000 & estimate < 200000 ~ 175,
+      estimate >= 200000 ~ 250
+    )
+  )
+```
+
+Find average hh size for each income bin 
+```{r}
+income_hh_size_summary <-   
+  glen_income_hh_size %>% 
+  group_by(income_bracket) %>% 
+  summarize(
+    hh_size = round(mean(size),2),
+    count = n()
+  ) 
+print.data.frame(income_hh_size_summary)
 ```
 

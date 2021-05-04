@@ -266,7 +266,7 @@ Now we associate each variable name with the corresponding hh size
 ```{r}
 sizes <- tibble(
   size=c(1:7),
-  varible=unique(acs_df$variable)
+  varible=unique(glen_income_hh_size$variable)
 )
 
 glen_income_hh_size$size <- 0

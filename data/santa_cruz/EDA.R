@@ -42,7 +42,6 @@ d6 <- d6[which(d6$year!=2008),]
 d6 <- d6[which(d6$year!=2020),]
 
 
-
 # read in the Tait Street diversions
 d8 <- read.csv("water_right_progress_report7200.csv")
 d8 <- d8[c(1:3)]
@@ -109,13 +108,38 @@ df_sources$feltonDiversions <- df$`d5$volume16601`+df$`d6$volume16123`
 df_sources$newellInflow <- df$`d7$volume9847`
 df_sources$newellUsed   <- df$`d7$newellUsed`
 
-# make a plot of these 
-plot(taitStreet~date,data=df_sources,type="l",ylim=c(0,800))
-lines(northCoast~date,data=df_sources,type="l",col="blue")
-lines(newellUsed~date,data=df_sources,type="l",col="red")
+
+# make a plot of these
+LWD = 2
+plot(taitStreet/3.06888785~date,data=df_sources,type="l",ylim=c(0,300),ylab="Million Gallons/Month",lwd=LWD)
+lines(northCoast/3.06888785~date,data=df_sources,type="l",col="blue",lwd=LWD)
+lines(newellUsed~date,data=df_sources,type="l",col="red",lwd=LWD)
+
+# draw rectangles shading the bacgkround 
+xlefts = seq(from=as.Date("2009-10-01"),to=as.Date("2019-10-01"),length.out = 6)
+xrights = seq(from=as.Date("2010-09-30"),to=as.Date("2020-09-30"),length.out = 6)
+ybottoms = seq(0,length.out=6)
+ytops = seq(800,length.out=6)
+
+rect(xleft=xlefts,ybottom=ybottoms,ytop = ytops,xright = xrights,col = rgb(0.5,0.5,0.5,1/4),density = NULL,border= NA)
 legend(x="topright",legend=c("San Lorenzo","North Coast","Loch Lomond"),
-       col=c("black","blue","red"),lty=1)
-# now make a stacked bar 
+       col=c("black","blue","red"),lty=1,lwd=LWD)
+
+# Newell creek diversions are up to 108.9 mg/montht
+# 1553 (sann lorenzo surface) 4488.7AFY --> 121.89 mg/month
+# 7200 (the other san lorenzo) 4343.9 AFY --> 108.8mg/month
+abline(h=121.89+108.8)
+
+# North Coast Maximum DIversions?
+
+# import the reservoir levels 
+res_levels <- read.table("./res_levels.txt",header = T)
+res_levels$date <- as.Date(paste0(res_levels$Year,"-10-01"))
+
+plot(-1*Max~date,data=res_levels,ylim=c(-30,0),type="l",main="Max/Min Reservoir Level")
+lines(-1*Min~date,data=res_levels)
+
+
 
 library(reshape2)
 df_melted <- melt(df_sources[,c(1:4,6)],id.vars = "date")
@@ -128,3 +152,7 @@ p1 + geom_area(alpha=0.6 , size=.5, colour="white") +
   scale_fill_viridis(discrete = T) +
   theme_ipsum() 
 
+
+# make a san lorenzo diversion plot which is in CFS
+LWD = 2
+plot(taitStreet*0.0508~date,data=df_sources,type="l",ylim=c(0,800*0.0508),ylab="CFS",lwd=LWD)

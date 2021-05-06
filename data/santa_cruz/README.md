@@ -1,3 +1,11 @@
+# Processing script 
+
+The 'data processing' script takes in all of the water rights data, and makes the output data file. Below are all the specifics
+
+
+# R-GPCD
+Note, the R-GPCD numbers are likely slight underestimaes because it includes the population of UCSC in the denominator, but not their water use in the numerator because their water use is classified as commercial instead of residential
+
 # Santa cruz water rights
 
 North coast

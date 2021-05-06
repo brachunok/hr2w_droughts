@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May  5 19:29:57 2021
+
+@author: brachuno
+"""
+# unit tests
+
+# packages
+import os, sys
+#sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
+
+import datetime
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+from wrtools import *
+
+
+# check reservoir releases
+res = Reservoir(2800,20)
+res.set_volume(2800)
+res.make_fixed_environmental_release(100, 10)
+# this release should be 90
+# and the remaining volume should be 2800
+res.volume
+
+# now check this situation where we draw down
+res = Reservoir(2800,20)
+res.set_volume(1500)
+res.make_fixed_environmental_release(100, 250)
+# we should be releasing 20 and volume should be 1330
+res.volume

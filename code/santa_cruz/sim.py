@@ -1,39 +1,3 @@
-# discrete (weekly) simulation
-# this is the general overview of how this works
-
-#(1) read in all the data and import modules etc..
-#(2) define all of my classes which are
-# .   inflows, reservoirs, demands, transfers
-# (3) define all of my connections, capacities etc.
-#(4) then for each time step do the following
-
-    # get the next inflow step
-    #  update the reservoir levels
-    # then see if I can meet my demand.
-    # if I can, do so, and record everything
-    # if I cant' start looking through my priorities
-
-# starting a todo list
-# (1) move the income elasticity out of the function and let it be specified
-    # based on how groups change vs MHI (ie a 5% reduction for a group below)
-    # MHI reduces their demand by X---> DONE
-
-
-# (4) see how conservation was calculated --> was it a reduction by person
-    # or by residence?
-
-# (5) make sure my income bins all line up. Both here in the model,
-#       and in the household size calculation
-
-# (6) make sure i'm getting the right household data and that the sumprod of counts + sizes is
-#       close to total population
-
-# notes Global water intelligence, Bluefield research, AWWA
-#    https://energyconsumersaustralia.worldsecuresystems.com/grants/508/AP-508-Impacts-Consequences-Low-Income-Households-Rising-Energy-Bills.pdf
-
-# sacramento data used currently to the best knowledge.
-# from here: https://www.cityofsacramento.org/~/media/Corporate/Files/DOU/2015%20UWMP%20June%202016Appendices.pdf
-
 # packages
 import os, sys
 #sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
@@ -59,14 +23,15 @@ YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
 PED= 0.41  # the mean values of their analysis
 
 # read in the input data
-input_data = pd.read_csv(repo_home / 'data'/'sacramento'/'sacramento_inputs_drought.csv')
+input_data = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_input_data.csv')
 # ALL DATA IN INPUT DATA IS MILLIONGALLONS/MONTH
 
 # convert the input data date
 input_data['date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
 
 # get my baseline demand
-baseline_demand = pd.read_csv(repo_home / 'data'/'sacramento'/"city_of_sacramento_processed.csv")
+baseline_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'rcpgd_sc.csv')
+baseline_demand.columns = ["reporting_month","mean"]
 # units are GPCD`
 
 # initialize my dataframe of outputs
@@ -90,65 +55,53 @@ LENGTH = len(outputs['Date'])
 outputs = outputs.loc[:LENGTH]
 
 # make convenient dataframes of all my water sources
-inflows = input_data[['date','surface']]
-groundwaters = input_data[['date','groundwater']]
+inflows = input_data[['date','northCoast','taitStreet','newellInflow','feltonDiversions']]
+groundwaters = input_data['date']
+# TODO, update groundwater
 
 # initialize my flows
-inflow = Inflow(inflows['surface'].iloc[0])
+#inflow = Inflow(inflows['surface'].iloc[0])
 
 # do the same for groudwater
-groundwater = GroundWater(groundwaters['groundwater'].iloc[0])
+#groundwater = GroundWater(groundwaters['groundwater'].iloc[0])
+
+#TOOD: update groundwater
+
 
 # other demand
-other_demand = input_data[['date','other']]
+other_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_non_res_demand.csv')
+# todo: update temporal other demand
 
 # now for my cities
 city = City(1,YED)#
 
 #change reservoir size and set volume
-#reservoir = Reservoir(52) # unit is MG
-#reservoir.set_volume(52/2)
-
-reservoir = Reservoir(30000) # this is a rough estimate bsed on
-reservoir.set_volume(30000)  # how much
+reservoir = Reservoir(2800,20) # Loch Lomond. Capacity in MG and monthly env release in MG
+reservoir.set_volume(2800)
 
 
-# define a demand function
-# define all my demand data
-# we are going to define a series of bins,the ith location
-# in each vector has the population, househodl size, income, and leakage
-# volumes for eachpopulation
-
-# total number of people living in each household size (I think?)
-populations = [22270,39529,43426,61799,97988,76275,96847,47323]
+# total number of people living in each household size (
+populations = [2365,1648,1456,1285,1424,1027,1018,1077,874,1931,2352,4064,3110,2091,3263,4895]
 
 # sizes from the get_acs_data script
-household_sizes = [1.23,1.93,2.53,3.11,3.42,3.86,9.47,4.28]
-#populations = [ 7652. , 13583., 14923., 21236., 33672., 26211., 33280., 16262.]
-populations = np.divide(populations,household_sizes)
+household_sizes = [1,3,3,3,1,1,1.67,1.4,1,1.57,1.86,3.17,3,3.57,4.58,5.38]
 
-income = [12500,17250,30000,42500,62500,87500,125000,175000]
-##household_sizes = [1,1,1,1,1,1,1,1]
-#household_sizes = [2.91,2.91,2.91,2.91,2.91,2.91,2.91,2.91]
-household_sizes = [1.23,1.93,2.53,3.11,3.42,3.86,9.47,4.28]
+#populations = [ 7652. , 13583., 14923., 21236., 33672., 26211., 33280., 16262.]
+#populations = np.divide(populations,household_sizes)
+
+income = [7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000]
+
 
 # make the houshold demand dataframe
 hh_demand = pd.DataFrame(columns=income)
 hh_bills  = pd.DataFrame(columns=income)
 
-#TODO: update these
-# sizes are estimated based on a simple regression
-# using the data provided in the income historical tables.
-# because the ACS doesn't report those specifically
-
-leakages = [.1,.1,.1,.1,.1,.1,.1,.1]
+leakages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 # now add these to the city object
 
 city.set_bins(populations,income,household_sizes,leakages)
 
-# fInitial demand is 158 GPCD from table 5-3 in UWMP
-# daily demands
 
 # define a utility
 ut = Utility("utility",0.03)
@@ -159,15 +112,19 @@ ut.add_option("res1",50,60,60,1000000)
 # add a drought option in california, the drought was a
 # 25% reduction which lasted a year
 
-ut.set_fixed_charge(29.52)
-ut.set_tier_prices([1.2055])
-ut.set_tiers([999999])# set an upper limit
+ut.set_fixed_charge(13.55)
+ut.set_tier_prices([9.03,10.86,12.78,15.74])
+ut.set_tiers([5,7,9,10,999999])# set an upper limit
+
+#13.55 + 1(CCF) + 9.03(0-5CCF) + 10.86(6-7CCF) + 12.78(8-9CCF) + 15.74(CCF 10+ )
 
 # initialize states
 decision_trigger = False
 conservation_fraction = 0
 percentage_change_quantity = 0
 
+
+#TODO: i'm here. figure out what santa cruz did and model it
 # we do this for every month
 for m in range(outputs['Date'].count()):
 #for m in range(3):
@@ -239,8 +196,11 @@ for m in range(outputs['Date'].count()):
     #^^ This is very hacky but it works. The index at the end someone needs to always get the ith value.
     # not just the first. Maybe fixibale by re-indexing but this shoud be airtight for now.
 
+    # calculate my other demand
+    this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
+
     outputs.loc[outputs.index==m,'pedReduction'] = percentage_change_quantity
-    ut.demand = city.get_utility_demand(this_baseline)/1000000 + other_demand['other'].iloc[m]
+    ut.demand = city.get_utility_demand(this_baseline)/1000000 + this_other
     # this is setting the utility demand in MG
 
     # write the demand
@@ -259,31 +219,42 @@ for m in range(outputs['Date'].count()):
     hh_bills.loc[m] = class_bills
 
     # for this particular month, here are our inflows
-    this_inflow = inflows['surface'].loc[inflows['date'].eq(this_date)]
+    #this_inflow = inflows['surface'].loc[inflows['date'].eq(this_date)]
+    surface_inflows = inflows[['northCoast','taitStreet']].loc[inflows['date'].eq(this_date)].sum(axis=1)
     # INFLOWS AND SURFACE WATER NEED TO BE MONTHLY TOTALS
 
     # record inflows
-    outputs.loc[outputs.index==m,'surface']= this_inflow.to_numpy()[0]
+    outputs.loc[outputs.index==m,'surface']= surface_inflows.to_numpy()[0]
 
     # udpate groundwater flow
-    this_ground = groundwaters['groundwater'].loc[groundwaters['date'].eq(this_date)]
+    this_ground = 10
+    # TODO: update
+
     # record groundwater
-    outputs.loc[outputs.index==m,'ground'] = this_ground.to_numpy()[0]
+    outputs.loc[outputs.index==m,'ground'] = this_ground #this_ground.to_numpy()[0]
+
+    # calculate how much is going into the reservoir
+    res_inflows = inflows[['feltonDiversions','newellInflow']].loc[inflows['date'].eq(this_date)].sum(axis=1)
+
+    #TOOD: write this amount to outputs
+
+    #TODO
+    # calculate how much we are withdrawing
+    res_demand = input_data['newellUsed'].loc[input_data['date'].eq(this_date)]
+    # TODO: write this amount to outputs
+
 
     # simulate them going into the reservoir
-    release =reservoir.make_sop(this_inflow,ut.demand-this_ground)
-    #release = release.to_numpy()[0]
+    release =reservoir.make_fixed_environmental_release(res_inflows,res_demand)
 
-    # and any reservoir adjustemnts we have to make
+    #TODO: evaporation
 
     # record release and volume
     outputs.loc[outputs.index==m,'level'] = reservoir.volume
     outputs.loc[outputs.index==m,'release'] = release
 
     # calculate and record any shortages
-    outputs.loc[outputs.index==m,'deficit'] = max(ut.demand-release-this_ground.to_numpy()[0],0)
-
-
+    outputs.loc[outputs.index==m,'deficit'] = max(ut.demand-res_demand-this_ground)# max(ut.demand-release-this_ground.to_numpy()[0],0)
 
     # calculate minimum res level for making decisions
     if outputs['trigger'].eq("YES").any() == False:
@@ -333,6 +304,6 @@ for m in range(outputs['Date'].count()):
     else:
         decision_trigger = False
 # record the outputs
-outputs.to_csv(repo_home / 'outputs'/'sacramento'/"outputsTEST.csv")
-hh_demand.to_csv(repo_home / 'outputs'/'sacramento'/ "hh_demandTEST.csv")
-hh_bills.to_csv(repo_home / 'outputs'/'sacramento'/"hh_billsTEST.csv")
+outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/"outputs.csv")
+hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ "hh_demand.csv")
+hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/"hh_bills.csv")

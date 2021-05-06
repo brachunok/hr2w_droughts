@@ -62,8 +62,10 @@ class City:
     # this is a monthyly demand in gallons for everyone
 
 class Reservoir:
-    def __init__(self, capacity):
+    def __init__(self, capacity,env_release):
         self.capacity = capacity
+        self.env = env_release
+
 
     def set_volume(self,volume):
         self.volume = volume
@@ -72,7 +74,15 @@ class Reservoir:
     def make_fixed_release_by_volume(self,inflows,demands,thresholds,releases):
         # here, we make releases based on a givn volume in the reservoir
         # ie, if we have x amount release y, above x amount, release more etc..
-        self.volume=self.volume
+        print("b")
+
+    def make_fixed_environmental_release(self,inflows,demands):
+       # release the environmental flows and any volume required to keep us from spilling
+
+       release = max(self.env,(self.volume+np.sum(inflows)-np.sum(demands)-self.capacity))
+       self.volume = self.volume + np.sum(inflows)- release - np.sum(demands)
+
+       return(release)
 
     def make_fixed_release_by_date(self,inflows,demands,wkindex,indexset,releases):
         # this makes a fixed release based on the week of the year.

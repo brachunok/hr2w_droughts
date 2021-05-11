@@ -113,7 +113,7 @@ df_sources$newellUsed   <- df$`d7$newellUsed`
 LWD = 2
 plot(taitStreet/3.06888785~date,data=df_sources,type="l",ylim=c(0,300),ylab="Million Gallons/Month",lwd=LWD)
 lines(northCoast/3.06888785~date,data=df_sources,type="l",col="blue",lwd=LWD)
-lines(newellUsed~date,data=df_sources,type="l",col="red",lwd=LWD)
+#lines(newellUsed~date,data=df_sources,type="l",col="red",lwd=LWD)
 
 # draw rectangles shading the bacgkround 
 xlefts = seq(from=as.Date("2009-10-01"),to=as.Date("2019-10-01"),length.out = 6)
@@ -126,11 +126,14 @@ legend(x="topright",legend=c("San Lorenzo","North Coast","Loch Lomond"),
        col=c("black","blue","red"),lty=1,lwd=LWD)
 
 # Newell creek diversions are up to 108.9 mg/montht
+#abline(h=108.8)
+
 # 1553 (sann lorenzo surface) 4488.7AFY --> 121.89 mg/month
 # 7200 (the other san lorenzo) 4343.9 AFY --> 108.8mg/month
 abline(h=121.89+108.8)
 
-# North Coast Maximum DIversions?
+# north coasat diversions have no limit
+
 
 # import the reservoir levels 
 res_levels <- read.table("./res_levels.txt",header = T)

@@ -3,6 +3,11 @@
 The 'data processing' script takes in all of the water rights data, and makes the output data file. Below are all the specifics
 
 
+# NOTES ABOUT HOW WE PARAMETERIZE RES OPERATIONS
+april through november use ~ 2680 mg of water total
+
+I'm here: calculate 2x2015 to see how much water we would have to use 
+
 # R-GPCD
 Note, the R-GPCD numbers are likely slight underestimaes because it includes the population of UCSC in the denominator, but not their water use in the numerator because their water use is classified as commercial instead of residential
 

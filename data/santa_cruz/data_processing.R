@@ -96,13 +96,14 @@ df$year <- as.numeric(format(df$datetime,'%Y'))
 
 # north coast is 2042,2043,2044,8610
 df_sources <- data.frame(date= df$datetime)
-df_sources$northCoast <- df$`d2$volume2042`+df$volume2043+df$`d4$volume2044`+df$`d3$volume8610`
+df_sources$northCoast <- (df$`d2$volume2042`+df$volume2043+df$`d4$volume2044`+df$`d3$volume8610`)/3.06888785
+# make sure it's converted to MG
 
 # Tait Street diersions 1553,7200
-df_sources$taitStreet <- df$`d8$volume7200`+df$`d9$volume1553`
+df_sources$taitStreet <- (df$`d8$volume7200`+df$`d9$volume1553`)/3.06888785
 
 # Felton Diversions to Loch Lomond
-df_sources$feltonDiversions <- df$`d5$volume16601`+df$`d6$volume16123`
+df_sources$feltonDiversions <- (df$`d5$volume16601`+df$`d6$volume16123`)/3.06888785
 
 # Newell Creek (Lomond Outflow)
 df_sources$newellInflow <- df$`d7$volume9847`

@@ -17,8 +17,17 @@ repo_home = Path("./").absolute().parents[1]
 # i.e. click 'run' vs running line by line
 
 
+# cutoffs
+cutoffs = np.array([0,5,15,25,35,50])
+
+conservation_policies = pd.DataFrame(index= cutoffs)
+conservation_policies['res_reductions']=np.array([0,5,16,27,38,52])
+conservation_policies['other_reductions']=[0,5,15,25,35,50]
+
+# read in the decisionmaking file
+decisions = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_decisions.csv')
+
 # threshold for making an economic decision
-RES_THRESHOLD = 0.25
 YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
 PED= 0.41  # the mean values of their analysis
 
@@ -35,12 +44,13 @@ baseline_demand.columns = ["reporting_month","mean"]
 # units are GPCD`
 
 # initialize my dataframe of outputs
-outputs = pd.DataFrame(columns=['Date','baselineDemand','','surface','ground',
+outputs = pd.DataFrame(columns=['Date','totalDemand','residentialDemand','otherDemand','surface','ground',
                                'level', 'deficit','release','restriction','trigger',
-                               'conserveStatus','buildStatus','fixedCharge','tieredPrices','pedReduction'])
+                               'conserveStatus','fixedCharge','tieredPrices','pedReduction','revenueLost'])
 
 outputs['Date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
 outputs['month'] = pd.DatetimeIndex(outputs['Date']).month
+
 
 # n is a row index that records how many weeks we've done this for
 #(needed because the looping below is by month, then by week )
@@ -106,15 +116,11 @@ city.set_bins(populations,income,household_sizes,leakages)
 # define a utility
 ut = Utility("utility",0.03)
 ut.add_option("res1",50,60,60,1000000)
-#ut.add_option("res2",60,60,60,2000000)
-#ut.add_option("res3",80,30,60,2100000)
 
-# add a drought option in california, the drought was a
-# 25% reduction which lasted a year
 
 ut.set_fixed_charge(13.55)
 ut.set_tier_prices([9.03,10.86,12.78,15.74])
-ut.set_tiers([5,7,9,10,999999])# set an upper limit
+ut.set_tiers([5,7,9,999999])# set an upper limit
 
 #13.55 + 1(CCF) + 9.03(0-5CCF) + 10.86(6-7CCF) + 12.78(8-9CCF) + 15.74(CCF 10+ )
 
@@ -122,9 +128,9 @@ ut.set_tiers([5,7,9,10,999999])# set an upper limit
 decision_trigger = False
 conservation_fraction = 0
 percentage_change_quantity = 0
+res_reduction = 0
+nonres_reduction = 0
 
-
-#TODO: i'm here. figure out what santa cruz did and model it
 # we do this for every month
 for m in range(outputs['Date'].count()):
 #for m in range(3):
@@ -132,79 +138,70 @@ for m in range(outputs['Date'].count()):
     this_date = outputs['Date'].iloc[m]
     this_month = outputs['month'].iloc[m]
 
-    if decision_trigger==True:
-        # if we are making a decision...
-        if conservation_trigger==True:
-            # our decision is conservation
+    # read in my baseline inputs for residential and non-residential demands
+    this_baseline = baseline_demand['mean'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
+    this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
 
-            # nothing happens right now except we record it.
-            # the conservaation happens in the 'conservation_fraction' value
-            outputs['conserveStatus'].iloc[m] = conservation_fraction
-            #*make it such that only one decision can happen
-            #* update billing based on costs
-            #*
-        else:
-            # our decision is build
-            option = ut.check_pending(m)
+    # read from input file to determine what decisions we are making
 
-            # if the option is false, do nothing we must move on
-            if option !=False:
-                # if i'ts not false, then it's a row from options
-                reservoir.capacity = reservoir.capacity + option['capacity']
-                outputs['buildStatus'] = "built!"
-            else:
-                # record that we have an active decision and record it
-                outputs['buildStatus'].iloc[m] = "buildilng"
+    if (decisions['conserve_stage'].iloc[m]!=decisions['conserve_stage'].iloc[m-1]):
+
+        this_decision = decisions['conserve_stage'].iloc[m]
+        this_conservation = conservation_policies.iloc[this_decision]
+
+        # the conservaation happens in the 'conservation_fraction' value
+        outputs.loc[outputs.index==m,'conserveStatus'] = this_conservation['res_reductions']
+        res_reduction = this_conservation['res_reductions']/100
+        nonres_reduction = this_conservation['other_reductions']/100
+
+        # now calculate lost revenue from the reduction
+        #TODO: also calculate a cost here as well for a larger project
+        # calculate the volume needed
+        volume_reduced = (res_reduction)*(this_baseline)#+((1-nonres_reduction)*this_other)
+        cost_of_conservation = ut.calculate_cost_of_conservation_EVEN_by_household(volume_reduced, city,baseline_demand)
+        print(cost_of_conservation)
+        additional_monthly_cost = cost_of_conservation
+
+        outputs.loc[outputs.index==m,'revenueLost']=additional_monthly_cost
 
         # update my rate structure
-        household_cost = additional_monthly_cost/sum(city.counts)
+        household_cost = additional_monthly_cost/np.multiply(city.household_sizes,city.counts).sum()
         # ^^ this is costs per month
 
         # pass costs on in the fixed cost for right now
         ut.set_fixed_charge(ut.fixed_charge+ household_cost)
 
-        # pass costs on in the volumetric rate
-        # divide the total cost we have to recoup by the total city demand
-        # to understand how much money needs to be returned per gallon
-        # which then needs to be converted to $/ccf and added to the rate
-        #unit_cost_increase = additional_monthly_cost/city.get_utility_demand(baseline_demand['mean'].mean())*748
-        #ut.set_tier_prices([ut.prices[0]+unit_cost_increase])
 
     # regardless of what we've done, record the bill structure
     outputs.loc[outputs.index==m,'fixedCharge']=ut.fixed_charge
-    outputs.loc[outputs.index==m,'conserveStatus'] = conservation_fraction
-
-    # if last month's price is this month's price, do nothing
-
-    if m > 0:
-        if outputs['fixedCharge'].iloc[m] !=outputs['fixedCharge'].iloc[m-1]:
-            print('inloop')
-            # this means we updated the fixed charge above
-            # so we have to update the demand based on that
-            old_price = outputs['fixedCharge'].iloc[m-1]
-            new_price = outputs['fixedCharge'].iloc[m]
-
-            percentage_change_price = (new_price-old_price)/old_price
-
-            percentage_change_quantity = PED*percentage_change_price
+    outputs.loc[outputs.index==m,'conserveStatus'] = res_reduction
 
 
-    # get_utility _demand outputs all the values in
-    # gallons so divide by a million to get million-gallons
+    if outputs['fixedCharge'].iloc[m] !=outputs['fixedCharge'].iloc[m-1] and m> 0:
 
-    this_baseline = baseline_demand['mean'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]*(1-conservation_fraction)*(1-percentage_change_quantity)
-    #^^ This is very hacky but it works. The index at the end someone needs to always get the ith value.
-    # not just the first. Maybe fixibale by re-indexing but this shoud be airtight for now.
+        # this means we updated the fixed charge above
+        # so we have to update the demand based on that
+        old_price = outputs['fixedCharge'].iloc[m-1]
+        new_price = outputs['fixedCharge'].iloc[m]
+
+        percentage_change_price = (new_price-old_price)/old_price
+
+        percentage_change_quantity = PED*percentage_change_price
+
+    # now make adjustments based on conservation, and price changes
+    adjusted_baseline = this_baseline*(1-res_reduction)*(1-percentage_change_quantity)
 
     # calculate my other demand
-    this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
+    adjusted_other = this_other*(1-nonres_reduction)
 
     outputs.loc[outputs.index==m,'pedReduction'] = percentage_change_quantity
-    ut.demand = city.get_utility_demand(this_baseline)/1000000 + this_other
+    ut.demand = city.get_utility_demand(adjusted_baseline)/1000000 + adjusted_other
     # this is setting the utility demand in MG
 
     # write the demand
-    outputs.loc[outputs.index==m,'baselineDemand'] = ut.demand
+    outputs.loc[outputs.index==m,'totalDemand'] = ut.demand
+    outputs.loc[outputs.index==m,'residentialDemand'] = city.get_utility_demand(this_baseline)/1000000
+    outputs.loc[outputs.index==m,'otherDemand'] = this_other
 
     #Record demand for an average house from each class
     # update demand
@@ -226,6 +223,13 @@ for m in range(outputs['Date'].count()):
     # record inflows
     outputs.loc[outputs.index==m,'surface']= surface_inflows.to_numpy()[0]
 
+    # reservoir inflows
+    ll_inflows = inflows[['feltonDiversions','newellInflow']].loc[inflows['date'].eq(this_date)].sum(axis=1)
+    ll_inflows = ll_inflows.iloc[0]
+
+
+    #TODO: update to make sure a deficit is passed on
+
     # udpate groundwater flow
     this_ground = 10
     # TODO: update
@@ -233,19 +237,66 @@ for m in range(outputs['Date'].count()):
     # record groundwater
     outputs.loc[outputs.index==m,'ground'] = this_ground #this_ground.to_numpy()[0]
 
-    # calculate how much is going into the reservoir
-    res_inflows = inflows[['feltonDiversions','newellInflow']].loc[inflows['date'].eq(this_date)].sum(axis=1)
+    # calculate my surface water deficit to determine how much we can draw from the reservoir
+    # this is demand- surface-ground
+    surface_deficit = ut.demand - this_ground - surface_inflows.iloc[0]
 
-    #TOOD: write this amount to outputs
+    # the policy (keep 87% full by April) means we can draw down 70mg from the res each month
+    # drawdown is the minimum of (surface deficit) and (res_inflows + 70mg)
+    # if the drawdown is above that, we will conserve, and move the conservation status to whatever of the 4 stages
+    # will meet the demand change
 
-    #TODO
-    # calculate how much we are withdrawing
-    res_demand = input_data['newellUsed'].loc[input_data['date'].eq(this_date)]
-    # TODO: write this amount to outputs
+    # reservoir is untouched unless we need it (ie, surface deficit > 0)
+    ll_demand = 0
 
+    if (surface_deficit > 0):
+        # this means we have to do some sort of drawdown
+
+        drawdown = min(surface_deficit,ll_inflows+70)
+
+        if surface_deficit < ll_inflows + 70:
+            drawdown = surface_deficit
+            ll_demand = drawdown
+
+
+
+        else:
+            # we need more than we have
+            drawdown = ll_inflows + 70
+            ll_demand = drawdown
+
+# =============================================================================
+#             if this_month ==4:
+#                 # if it's april, adjust all the conservation values
+#                 # figure out how much we ahve to drawdown
+#                 conserve_volume = surface_deficit - drawdown
+#                 conservation_fraction = conserve_volume/2473
+#
+#                 print(conservation_fraction)
+#                 decision_trigger = True
+#                 conservation_trigger = True
+#
+#                 #cutoffs = [5,15,25,35,50]
+#                 # res_reductions = [5,16,27,38,52]
+#                 # other_reductions = [5,15,25,35,50]
+#
+#                 this_stage=0
+#                 for f in range(0,cutoffs.size):
+#                     if cutoffs[f]>=conservation_fraction*100:
+#                         this_stage = cutoffs[f]
+#                         res_reduction = res_reductions[f]*.01
+#                         nonres_reduction = other_reductions[f]*.01
+#                         break
+#
+# =============================================================================
+                # figure out which reductions we should be passing on
+                # write all these to the conesrvation triggers for next month
+
+
+    # TODO: writeamount to outputs
 
     # simulate them going into the reservoir
-    release =reservoir.make_fixed_environmental_release(res_inflows,res_demand)
+    release =reservoir.make_fixed_environmental_release(ll_inflows,ll_demand)
 
     #TODO: evaporation
 
@@ -253,56 +304,14 @@ for m in range(outputs['Date'].count()):
     outputs.loc[outputs.index==m,'level'] = reservoir.volume
     outputs.loc[outputs.index==m,'release'] = release
 
-    # calculate and record any shortages
-    outputs.loc[outputs.index==m,'deficit'] = max(ut.demand-res_demand-this_ground)# max(ut.demand-release-this_ground.to_numpy()[0],0)
+    # calculate and record any deficits
 
-    # calculate minimum res level for making decisions
-    if outputs['trigger'].eq("YES").any() == False:
-        # We do this^^^ because we only want to make one decision
-        # and watch how it plays out
-        if (((reservoir.volume/reservoir.capacity)<=RES_THRESHOLD)) :
-            decision_trigger = True
-        else:
-            decision_trigger = False
-            conservation_fraction=0 # just make sure this is 0
+    this_deficit = max(ut.demand-ll_demand-this_ground-surface_inflows.iloc[0],0)
+    outputs.loc[outputs.index==m,'deficit'] = this_deficit
 
 
 
-        # make the decisions at the end of the simulated hydrology
-        # outside the for loop, check if we have to make any decisions
-        if decision_trigger == True:
 
-            # okay, so here we have incited the trigger
-            # now we have to figure out what decisions to make...
-            #TODO: record the decision and make sure we
-            outputs['trigger'].iloc[m]= "YES"
-            needed_deficit = max(ut.demand-release,0)
-            cheapest_index = ut.get_cheapest_monthly(needed_deficit)
-            if cheapest_index==-1:
-                cheapest_cost = 10000000000000
-            else:
-                cheapest_cost = ut.monthly_costs[cheapest_index]
-
-            # see how much conservation would cost assuming we are just going into stage 1 (from UWMP)
-            s1_need = .25*(inflows['surface'].iloc[m]+groundwaters['groundwater'].iloc[m])
-            s1_cost = ut.calculate_cost_of_conservation_EVEN_by_household(s1_need,city,baseline_demand)
-
-            # make some sort of decision as to what to do
-            # currently decide between a conservation of cost s1_cost and the cheapest option
-            conservation_trigger = False
-
-            if s1_cost<=cheapest_cost:
-                # this is if we conserve
-                conservation_trigger = True
-                conservation_fraction = 0.25 # from UWMP, will need to be expanded
-                additional_monthly_cost = s1_cost
-            else:
-                ut.choose_option(cheapest_index, m)
-                conservation_fraction=0
-                additional_monthly_cost = cheapest_cost
-            # decide whether to conserve or build.
-    else:
-        decision_trigger = False
 # record the outputs
 outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/"outputs.csv")
 hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ "hh_demand.csv")

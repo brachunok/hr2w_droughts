@@ -16,7 +16,6 @@ repo_home = Path("./").absolute().parents[1]
 # ^^ may not work if you are runnign interactively. Should work if you run the script all as once
 # i.e. click 'run' vs running line by line
 
-
 # cutoffs
 cutoffs = np.array([0,5,15,25,35,50])
 
@@ -26,6 +25,9 @@ conservation_policies['other_reductions']=[0,5,15,25,35,50]
 
 # read in the decisionmaking file
 decisions = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_decisions.csv')
+
+# name the one we want 'conserve_stage'
+decisions['conserve_stage']=decisions['baseline']
 
 # threshold for making an economic decision
 YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
@@ -141,6 +143,12 @@ for m in range(outputs['Date'].count()):
     # read in my baseline inputs for residential and non-residential demands
     this_baseline = baseline_demand['mean'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
     this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
+
+    # udpate residential demand if it needs to be based on what 'demand_changes' says
+    # the demand changes column will perminantly alter demand to 1-(demandchanges*100) *old demand
+    if decisions['demand_changes'].iloc[m]!=0:
+        print("demand changed to ",(1-decisions['demand_changes'].iloc[m]))
+        baseline_demand['mean'] = baseline_demand['mean']*(1-decisions['demand_changes'].iloc[m])
 
     # read from input file to determine what decisions we are making
 

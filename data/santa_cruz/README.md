@@ -11,6 +11,9 @@ I'm here: calculate 2x2015 to see how much water we would have to use
 # R-GPCD
 Note, the R-GPCD numbers are likely slight underestimaes because it includes the population of UCSC in the denominator, but not their water use in the numerator because their water use is classified as commercial instead of residential
 
+Notes on R_GPCD, they stopped doing a stage-3 in late 2015, but the RGPCD didn't change. In 1/16 we have a 'new' which will change the demand to being 
+
+
 # Santa cruz water rights
 
 North coast

@@ -34,3 +34,6 @@ res.set_volume(1500)
 res.make_fixed_environmental_release(100, 250)
 # we should be releasing 20 and volume should be 1330
 res.volume
+
+
+# compare actual residential values vs calculated household values

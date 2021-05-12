@@ -35,5 +35,55 @@ res.make_fixed_environmental_release(100, 250)
 # we should be releasing 20 and volume should be 1330
 res.volume
 
+# check billing ---------------------------------------------------------------
+
+# define a utility
+ut = Utility("utility",0.03)
+ut.add_option("res1",50,60,60,1000000)
+
+ut.set_fixed_charge(10.99)
+ut.set_tier_prices([10.03,11.86,13.78,16.74])
+ut.set_tiers([5,2,2,999999])# each of the tiers is the 'gap' to the next tier
+
+# see how bills change
+ut.get_bill(1) #21.02
+ut.get_bill(4) # 51.11
+ut.get_bill(6) # 73.00
+ut.get_bill(7) # 84.86
+ut.get_bill(8) # 98.64
+ut.get_bill(10) # 129.16
+ut.get_bill(19) # 279.82
+
+#13.55 + 1(CCF) + 9.03(0-5CCF) + 10.86(6-7CCF) + 12.78(8-9CCF) + 15.74(CCF 10+ )
+
 
 # compare actual residential values vs calculated household values
+# in 2015, residential water use was 1373mg/yr
+
+# get my baseline demand
+baseline_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'rcpgd_sc.csv')
+baseline_demand.columns = ["reporting_month","mean"]
+# other demand
+other_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_non_res_demand.csv')
+
+# total number of people living in each household size (
+populations = [2365,1648,1456,1285,1424,1027,1018,1077,874,1931,2352,4064,3110,2091,3263,4895]
+
+# sizes from the get_acs_data script
+household_sizes = [1,3,3,3,1,1,1.67,1.4,1,1.57,1.86,3.17,3,3.57,4.58,5.38]
+income = [7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000]
+city = City(1,YED)
+city.set_bins(populations,income,household_sizes,leakages)
+
+# now calculate total yearly demand under basline
+demand = pd.DataFrame()
+demand['m'] = range(12)
+demand['demand'] = 0
+
+#
+for m in range(12):
+    this_demand = 0 #other_demand['commercial_industrial'].iloc[m]
+    this_demand = this_demand + city.get_utility_demand(baseline_demand['mean'].iloc[m])/1000000
+    demand.loc[demand.index==m,'demand']=this_demand
+
+demand['demand'].sum()

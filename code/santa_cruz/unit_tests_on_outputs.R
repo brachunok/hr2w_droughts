@@ -1,22 +1,34 @@
 # Unit Tests in R 
+library(ggplot2)
 
-# (1) find the actual conservation dates and compare 
-# DONE
-
-# (2) get actual groundwater values
-
-# (3) plot utility cost per month and compare against the shortfalls they predict (from rate study, in 
+# plot utility cost per month and compare against the shortfalls they predict (from rate study, in 
 # weekly report)
 
-# (4) make sure deficit is calculatead 
+bills <- read.csv("~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/hh_bills.csv")
+demands <- read.csv("~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/hh_demand.csv")
+outputs <- read.csv("~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/outputs.csv")
+outputs$Date <- as.Date(as.character(outputs$Date))
 
-# (5) Add ET to reservoir losses
+library('ggplot2')
+library('reshape2')
+bills$date = outputs$Date
+bills$type = "bill"
+demands$date = outputs$Date
+demands$type="demand"
+hh = rbind(bills,demands)
 
-# (6) write reservoir withdrawl to outputs
+# financial deficit plot
+#plot(revenueLost~Date,data=outputs[which(outputs$revenueLost>0),],type="l")
 
-# calculate total water use and compare to totals from 
+#from UWMP
+# 600k/yr for a stage 1 --> 50k/month
+# 5.8millino/yr for a stage 5
+# expecting 2.9mil/yr for STAGE 3
 
-# (7) make affordability figures 
+monthly_lost_revenues = table(outputs$revenueLost,outputs$conserveStatus)
+monthly_lost_revenues
 
-# (3ish)
-# the bills feel off, make usre the unit for the use is correct 
+# drought cost recovery fee: 3/4" is 7.37/month
+fixed_costs = outputs$fixedCharge
+unique(fixed_costs)-10.99
+

@@ -68,21 +68,13 @@ outputs = outputs.loc[:LENGTH]
 
 # make convenient dataframes of all my water sources
 inflows = input_data[['date','northCoast','taitStreet','newellInflow','feltonDiversions']]
-groundwaters = input_data['date']
-# TODO, update groundwater
-
-# initialize my flows
-#inflow = Inflow(inflows['surface'].iloc[0])
-
-# do the same for groudwater
-#groundwater = GroundWater(groundwaters['groundwater'].iloc[0])
-
-#TOOD: update groundwater
-
+groundwaters = input_data[['date','groundwater']]
 
 # other demand
 other_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_non_res_demand.csv')
-# todo: update temporal other demand
+
+# et
+et = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_et.csv')
 
 # now for my cities
 city = City(1,YED)#
@@ -111,7 +103,6 @@ hh_bills  = pd.DataFrame(columns=income)
 leakages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 # now add these to the city object
-
 city.set_bins(populations,income,household_sizes,leakages)
 
 
@@ -120,11 +111,11 @@ ut = Utility("utility",0.03)
 ut.add_option("res1",50,60,60,1000000)
 
 
-ut.set_fixed_charge(13.55)
-ut.set_tier_prices([9.03,10.86,12.78,15.74])
-ut.set_tiers([5,7,9,999999])# set an upper limit
+# rates from here: https://www.cityofsantacruz.com/government/city-departments/water/monthly-water-costs-calculator
+ut.set_fixed_charge(10.99)
+ut.set_tier_prices([10.03,11.86,13.78,16.74])
+ut.set_tiers([5,2,2,999999])
 
-#13.55 + 1(CCF) + 9.03(0-5CCF) + 10.86(6-7CCF) + 12.78(8-9CCF) + 15.74(CCF 10+ )
 
 # initialize states
 decision_trigger = False
@@ -213,7 +204,7 @@ for m in range(outputs['Date'].count()):
 
     #Record demand for an average house from each class
     # update demand
-    class_demands = city.get_total_household_demands(this_baseline)
+    class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction))
     hh_demand.loc[m] = class_demands
 
     # get the bills for each
@@ -238,12 +229,11 @@ for m in range(outputs['Date'].count()):
 
     #TODO: update to make sure a deficit is passed on
 
-    # udpate groundwater flow
-    this_ground = 10
-    # TODO: update
+    # udpate groundwater
+    this_ground = groundwaters['groundwater'].iloc[m]
 
     # record groundwater
-    outputs.loc[outputs.index==m,'ground'] = this_ground #this_ground.to_numpy()[0]
+    outputs.loc[outputs.index==m,'ground'] = this_ground
 
     # calculate my surface water deficit to determine how much we can draw from the reservoir
     # this is demand- surface-ground
@@ -266,47 +256,18 @@ for m in range(outputs['Date'].count()):
             drawdown = surface_deficit
             ll_demand = drawdown
 
-
-
         else:
             # we need more than we have
             drawdown = ll_inflows + 70
             ll_demand = drawdown
 
-# =============================================================================
-#             if this_month ==4:
-#                 # if it's april, adjust all the conservation values
-#                 # figure out how much we ahve to drawdown
-#                 conserve_volume = surface_deficit - drawdown
-#                 conservation_fraction = conserve_volume/2473
-#
-#                 print(conservation_fraction)
-#                 decision_trigger = True
-#                 conservation_trigger = True
-#
-#                 #cutoffs = [5,15,25,35,50]
-#                 # res_reductions = [5,16,27,38,52]
-#                 # other_reductions = [5,15,25,35,50]
-#
-#                 this_stage=0
-#                 for f in range(0,cutoffs.size):
-#                     if cutoffs[f]>=conservation_fraction*100:
-#                         this_stage = cutoffs[f]
-#                         res_reduction = res_reductions[f]*.01
-#                         nonres_reduction = other_reductions[f]*.01
-#                         break
-#
-# =============================================================================
-                # figure out which reductions we should be passing on
-                # write all these to the conesrvation triggers for next month
-
-
     # TODO: writeamount to outputs
 
     # simulate them going into the reservoir
-    release =reservoir.make_fixed_environmental_release(ll_inflows,ll_demand)
+    release =reservoir.make_fixed_environmental_release(ll_inflows-et['et'].iloc[this_month-1],ll_demand)
+    # et gets included here because evaporative lossese/ precipitation gains
+    # are beneficial uses which count toward previously stored water, not current uses
 
-    #TODO: evaporation
 
     # record release and volume
     outputs.loc[outputs.index==m,'level'] = reservoir.volume

@@ -443,48 +443,35 @@ class Utility:
                 row = i
         return(row)
 
-    def calculate_cost_of_conservation_EVEN_by_household(self,capacity_needed,city,baseline):
-        # take the amount we need, assume that amout is distributed EVENLY
-        # across all individuals
-        #
-        # capacity needed divided by total population
-        #
-        # Then calculate the total revenue given they use the current amount
-        # and the total revenue given they need to conserve
-
-        average_monthly_use = baseline['mean'].mean()
-        # this is in gallons per person per day
+    def calculate_cost_of_conservation_EVEN_by_household(self,percent_reduction,city,baseline):
 
         # get how much each class is using
-        current_use = city.get_total_household_demands(average_monthly_use)
-        # this is the total for one household of each class given the baseline^
-        # in gallons
-        current_use_ccf = current_use/748
+        baseline['adjusted'] = baseline['mean']*(1-percent_reduction)
+        baseline['current_revenue'] = 0
+        baseline['adjusted_revenue'] = 0
+        # now compute for whole city for each
+        for h in range(len(baseline['mean'])):
+            # calculate baseline use for one
+            monthly_baseline = baseline['mean'].iloc[h]
+            monthly_adjusted = baseline['adjusted'].iloc[h]
 
-        current_revenue = list()
-        for h in range(len(current_use)):
-            current_revenue.append(self.get_bill(current_use_ccf[h])*city.counts[h])
+            current_use = city.get_total_household_demands(monthly_baseline)/748
+            adjusted_use = city.get_total_household_demands(monthly_adjusted)/748
 
-        # current revenue[h] is how much revenue is coming from all houses
-        # of class [h]
-        # that difference is the cost of conservation
-        total_current_revenue = sum(current_revenue)
+            current_revenue = list()
+            adjusted_revenue = list()
 
-        # now calculate the reduction
-        total_households= sum(city.counts)
+            for p in range(len(current_use)):
+                current_revenue.append(self.get_bill(current_use[p])*city.counts[p])
+                adjusted_revenue.append(self.get_bill(adjusted_use[p])*city.counts[p])
 
-        household_reduction_volume = capacity_needed*1000000/total_households
-        # multiply the capacity needed by 1000000 to make it gallons instead of
-        # MG
-        conservation_use = current_use - household_reduction_volume
+            # now write to baseline
+            baseline.loc[baseline.index==h,'current_revenue'] = sum(current_revenue)
+            baseline.loc[baseline.index==h,'adjusted_revenue'] = sum(adjusted_revenue)
 
-        conservation_use_ccf = conservation_use/748
-        # now calculate the new bills based on the conservation use
-        conservation_revenue = list()
-        for h in range(len(conservation_use)):
-            conservation_revenue.append(self.get_bill(conservation_use_ccf[h])*city.counts[h])
+        revenue_loss = sum(baseline['current_revenue'])-sum(baseline['adjusted_revenue'])
 
-        return(total_current_revenue-sum(conservation_revenue))
+        return(revenue_loss)
 
     def a_given_p(self,p,n):
         i = self.irr

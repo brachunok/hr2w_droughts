@@ -1,5 +1,5 @@
 ---
-title: "Glendale Water - Census Tracts"
+title: "Santa Cruz - Census Tracts"
 author: "Cameron Tenner"
 date: "5/3/2021"
 output: html_document
@@ -28,7 +28,7 @@ Load Santa Cruz County blockgroups using **tigris** package, import Santa Cruz w
 bg <-
   block_groups("CA", cb=F, progress_bar=F) %>% 
   filter(
-    COUNTYFP == "087" # LA County 
+    COUNTYFP == "087" 
   ) %>% 
   st_as_sf()
 
@@ -121,6 +121,7 @@ m <- leaflet() %>%
   )
 m
 ```
+toss out upper 
 
 Now we load in income data from census table B19001, and join with the Santa Cruz blockgroups of interest. We then do some math operations to find the count of households in each income bracket
 ```{r}

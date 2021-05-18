@@ -27,7 +27,10 @@ conservation_policies['other_reductions']=[0,5,15,25,35,50]
 decisions = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_decisions.csv')
 
 # name the one we want 'conserve_stage'
-decisions['conserve_stage']=decisions['baseline']
+scenario = 'drought1'
+decisions['conserve_stage']=decisions[scenario]
+# THIS IS HOW WE PICK THE SCENARIOS
+
 
 # threshold for making an economic decision
 YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
@@ -48,7 +51,7 @@ baseline_demand.columns = ["reporting_month","mean"]
 # initialize my dataframe of outputs
 outputs = pd.DataFrame(columns=['Date','totalDemand','residentialDemand','otherDemand','surface','ground',
                                'level', 'deficit','release','restriction','trigger',
-                               'conserveStatus','fixedCharge','tieredPrices','pedReduction','revenueLost'])
+                               'conserveStatus','fixedCharge','tieredPrices','pedReduction','annualRevenueLost','monthlyVolumeReduced'])
 
 outputs['Date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
 outputs['month'] = pd.DatetimeIndex(outputs['Date']).month
@@ -112,7 +115,9 @@ ut.add_option("res1",50,60,60,1000000)
 
 
 # rates from here: https://www.cityofsantacruz.com/government/city-departments/water/monthly-water-costs-calculator
-ut.set_fixed_charge(10.99)
+base_charge = 10.99
+ut.set_fixed_charge(base_charge)
+
 ut.set_tier_prices([10.03,11.86,13.78,16.74])
 ut.set_tiers([5,2,2,999999])
 
@@ -123,6 +128,8 @@ conservation_fraction = 0
 percentage_change_quantity = 0
 res_reduction = 0
 nonres_reduction = 0
+
+print("Running scenario: ",scenario)
 
 # we do this for every month
 for m in range(outputs['Date'].count()):
@@ -156,36 +163,50 @@ for m in range(outputs['Date'].count()):
         # now calculate lost revenue from the reduction
         #TODO: also calculate a cost here as well for a larger project
         # calculate the volume needed
-        volume_reduced = (res_reduction)*(this_baseline)#+((1-nonres_reduction)*this_other)
-        cost_of_conservation = ut.calculate_cost_of_conservation_EVEN_by_household(volume_reduced, city,baseline_demand)
-        print(cost_of_conservation)
-        additional_monthly_cost = cost_of_conservation
 
-        outputs.loc[outputs.index==m,'revenueLost']=additional_monthly_cost
+        #volume_reduced = (res_reduction)*(this_baseline)#+((1-nonres_reduction)*this_other)
+        outputs.loc[outputs.index==m,'monthlyVolumeReduced'] =  (city.get_utility_demand(this_baseline)-city.get_utility_demand(this_baseline*(1-res_reduction)))/1000000
+        # Reduction in MG/month
+
+        yearly_cost_of_conservation = ut.calculate_cost_of_conservation_EVEN_by_household(res_reduction, city,baseline_demand)
+        additional_monthly_cost = yearly_cost_of_conservation/12
+
+        outputs.loc[outputs.index==m,'annualRevenueLost']=yearly_cost_of_conservation
 
         # update my rate structure
         household_cost = additional_monthly_cost/np.multiply(city.household_sizes,city.counts).sum()
-        # ^^ this is costs per month
+        # ^^ this is costs per month/household
 
         # pass costs on in the fixed cost for right now
-        ut.set_fixed_charge(ut.fixed_charge+ household_cost)
-
+        if(res_reduction !=0):
+            ut.set_fixed_charge(ut.fixed_charge+ household_cost)
+        else:
+            ut.set_fixed_charge(base_charge)
+        #print(household_cost)
 
     # regardless of what we've done, record the bill structure
     outputs.loc[outputs.index==m,'fixedCharge']=ut.fixed_charge
     outputs.loc[outputs.index==m,'conserveStatus'] = res_reduction
 
 
-    if outputs['fixedCharge'].iloc[m] !=outputs['fixedCharge'].iloc[m-1] and m> 0:
-
+    if outputs['fixedCharge'].iloc[m] > outputs['fixedCharge'].iloc[m-1] and m> 0:
+        print("inpedloop")
+        # we only do this when the charge goes up, not when it goes     down,
+        # because that amount is incorperated into the rebound which is calculated
+        # seperately
         # this means we updated the fixed charge above
         # so we have to update the demand based on that
-        old_price = outputs['fixedCharge'].iloc[m-1]
-        new_price = outputs['fixedCharge'].iloc[m]
-
-        percentage_change_price = (new_price-old_price)/old_price
-
+        fixed_charge_difference = outputs['fixedCharge'].iloc[m] - outputs['fixedCharge'].iloc[m-1]
+        print("fixed charge diff: ",fixed_charge_difference)
+        ped_class_demands = city.get_total_household_demands(this_baseline)
+        mean_demand = ped_class_demands.mean()
+        print("mean demand: ",mean_demand)
+        percentage_change_price = fixed_charge_difference/ut.get_bill(mean_demand/748)
+        print("bill is: $",ut.get_bill(mean_demand/748))
         percentage_change_quantity = PED*percentage_change_price
+        # TODO
+        #here. Updating PED to work based on total bills
+        print("%age change quantity: ",percentage_change_quantity)
 
     # now make adjustments based on conservation, and price changes
     adjusted_baseline = this_baseline*(1-res_reduction)*(1-percentage_change_quantity)
@@ -282,6 +303,6 @@ for m in range(outputs['Date'].count()):
 
 
 # record the outputs
-outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/"outputs.csv")
-hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ "hh_demand.csv")
-hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/"hh_bills.csv")
+outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario /"outputs.csv")
+hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario / "hh_demand.csv")
+hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario / "hh_bills.csv")

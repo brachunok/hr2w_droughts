@@ -1,6 +1,7 @@
 # scenario affordability calculations 
 
 library(ggplot2)
+library(reshape2)
 
 # for now, just make an ad-hoc dataframe 
 bl_bills <- read.csv("~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/baseline/hh_bills.csv")
@@ -39,6 +40,32 @@ for (j in 1:length(incomes)){
 }
 
 
+# make figures of water bill for 47.5k and for 137.5k 
+selected_incomes <- bills[,c(9,13,17,18)]
+selected_incomes_plot <- melt(selected_incomes,id.vars = c("date","scenario"))
+
+xmin_list_baseline <- as.Date(c("2009-05-01","2012-05-01","2013-05-01","2014-04-01"))
+xmax_list_baseline <- as.Date(c("2009-10-01","2012-10-01","2013-12-01","2015-12-01"))
+
+xmin_list_d1 <- as.Date(c("2009-05-01","2013-05-01"))
+xmax_list_d1 <- as.Date(c("2009-10-01","2015-12-01"))
+
+
+# just plot before/during drought
+selected_incomes_plot <- selected_incomes_plot[which(selected_incomes_plot$date<=as.Date("2016-01-01")),]
+income_plot_one <- ggplot()+geom_line(data= selected_incomes_plot[which(selected_incomes_plot$variable=="X47500"),],aes(x=date,y=value,color=scenario))+facet_grid(rows=vars(variable),scales = "free")+
+  theme_bw()+ylab("Monthly Water Bill") + scale_color_manual(values = c("darkgray","darkred"))+
+  annotate("rect",xmin=xmin_list_baseline,xmax=xmax_list_baseline,ymin=20,ymax=22.5,alpha=0.2,fill=c("orange","green","green","red"))+
+  annotate("rect",xmin=xmin_list_d1,xmax=xmax_list_d1,ymin=22.5,ymax=25,alpha=0.2,fill=c("orange","orange"));income_plot_one
+
+
+income_plot_two <- ggplot()+geom_line(data= selected_incomes_plot[which(selected_incomes_plot$variable!="X47500"),],aes(x=date,y=value,color=scenario))+facet_grid(rows=vars(variable),scales = "free")+
+  theme_bw()+ylab("Monthly Water Bill") + scale_color_manual(values = c("darkgray","darkred"))+
+  annotate("rect",xmin=xmin_list_baseline,xmax=xmax_list_baseline,ymin=55,ymax=57.5,alpha=0.2,fill=c("orange","green","green","red"))+
+  annotate("rect",xmin=xmin_list_d1,xmax=xmax_list_d1,ymin=57.5,ymax=60,alpha=0.2,fill=c("orange","orange"));income_plot_two
+
+
+
 # now define a before and after period
 before_year <- 2010
 after_year  <- 2015
@@ -50,7 +77,6 @@ bills_fraction$period[format(bills_fraction$date,"%Y")%in%after_year] <- "after"
 
 # calculate affordability for the before period and after period and for each scenario and income class
 
-library(reshape2)
 bills_plotting <- melt(bills_fraction,id.vars = c("period","date","scenario"))
 bills_plotting <- bills_plotting[!is.na(bills_plotting$period),]
 
@@ -112,4 +138,8 @@ individual_demand_plotting$period <- factor(individual_demand_plotting$period,le
 
 individual_demand_plot <- ggplot(individual_demand_plotting,aes(y=value,x=variable,fill=period))+geom_boxplot()+theme_bw()+ylab("Monthly Individual Water Use");individual_demand_plot
 e
+
+# make outputs plots -----------------------------------------------------------
+
+# show inflows and highlight 
 

@@ -1,0 +1,230 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(knitr)
+library(viridis)
+```
+
+```{r}
+bills <- read.csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/outputs/sacramento/hh_billsTEST.csv") %>% 
+  rename(
+    "Month" = "X"
+  ) %>% 
+  set_names(
+    ~ str_replace_all(., "X", "")
+  ) %>%
+  pivot_longer(
+    !Month,
+    names_to = "Income",
+    values_to = "Value"
+  )
+  
+  
+demand <- read.csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/outputs/sacramento/hh_demandTEST.csv") %>% 
+    rename(
+    "Month" = "X"
+  ) %>% 
+  set_names(
+    ~ str_replace_all(., "X", "")
+  ) %>%
+  pivot_longer(
+    !Month,
+    names_to = "Income",
+    values_to = "Value"
+  )
+  
+output <- read.csv("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/outputs/sacramento/outputsTEST.csv")
+```
+
+Basic Visualization of Demand and Bills
+```{r fig.asp=.5}
+bills_plot <- ggplot(bills, 
+                     aes(x=Month, 
+                         y=Value, 
+                         color=factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) +
+  geom_vline(xintercept = 56, color="black", alpha = 0.5, size = 1, linetype = "dashed") + 
+  geom_line() + 
+  scale_color_viridis(discrete = T, option = "C") +
+  #scale_color_brewer(palette = "Blues") +
+  labs(
+    color = "Annual Household \n Income (USD)",
+    y = "Monthly Bill (USD)",
+    title = "Monthly Water Bills \n by Income Group, Sacramento"
+  ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+demand_plot <- ggplot(demand,
+                     aes(x=Month, 
+                         y=Value, 
+                         color=factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) +
+  geom_vline(xintercept = 56, color="black", alpha = 0.5, size = 1, linetype = "dashed") + 
+  geom_line() + 
+  scale_color_viridis(discrete = T, option = "C") +
+  #scale_color_brewer(palette = "Blues") +
+  labs(
+    color = "Annual Household \n Income (USD)",
+    y = "Monthly Water Demand (?)",
+    title = "Monthly Water Demand \n by Income Group, Sacramento"
+  ) + 
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+              
+ggarrange(demand_plot, bills_plot, common.legend = T, legend = "bottom")
+```
+
+Adjusted Bill (Affordability)
+```{r}
+bills <- 
+  bills %>% 
+  mutate(
+    monthly_income = as.numeric(Income) / 12,
+    perc_monthly_income = Value / monthly_income
+  )
+```
+
+```{r}
+ggplot(
+  bills,
+  aes(x=Month, 
+      y=perc_monthly_income*100, 
+      color=factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) + 
+  geom_hline(yintercept = 2.5, color = "red", alpha = 0.5, size = 1) +
+  geom_vline(xintercept = 56, color = "black", alpha = 0.5, size = 1, linetype = "dashed") +
+  geom_line(size=.6) + 
+  scale_color_viridis(discrete = T, option = "C") + 
+  labs(color = "Annual Household \n Income (USD)",
+       y = "Water Bill (% Monthly Income)",
+       title = "Percent of Monthly Income Spent on Water Bills \n by Income Group, Sacramento") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+ggplot(bills,
+       aes(
+         x = factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")),
+         y = perc_monthly_income*100,
+         fill= factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")),
+       )) + 
+  geom_hline(yintercept = 2.5, color = "red", alpha = 0.5, size = 1) +
+  geom_boxplot(color = "slategrey") + 
+  scale_fill_viridis(discrete = T, option = "C") + 
+  labs(
+    fill = "Annual Household \n Income (USD)",
+    x = "Annual Household \n Income (USD)",
+    y = "Water Bill (% Monthly Income)"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+```
+
+
+
+
+proportion population paying unaffordable rates 
+```{r}
+test_incomes <- tibble(
+  bracket = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000"),
+  perc_pop = c(9, 8, 10, 12, 17, 17, 16, 11)
+)
+
+bills <- 
+  bills %>% 
+  mutate(
+    unaff = case_when(
+      perc_monthly_income >= 0.025 ~ 1,
+      TRUE ~ 0,
+    ), 
+    pop_prop = NA
+  )
+
+
+
+for (i in 1: nrow(test_incomes)){
+  for (j in 1:nrow(bills)){
+    if (bills$Income[j] == test_incomes$bracket[i]){
+      bills$pop_prop[j] <- test_incomes$perc_pop[i]
+    }
+  }
+}
+
+bills_2 <- 
+  bills %>% 
+  mutate(
+    pop_unaff = unaff * pop_prop
+  ) %>% 
+  group_by(Month) %>% 
+  summarize(
+    perc_unaff = sum(pop_unaff)
+  )
+```
+
+water debt accumulation
+```{r}
+bills <- 
+  bills %>% 
+  mutate(
+    aff_threshold = monthly_income * 0.025,
+    debt = Value - aff_threshold
+  )
+
+bills$debt[bills$debt<0] <- 0
+
+pop_size <- 508000
+
+cum_debts <- 
+  bills %>% 
+  group_by(Income) %>% 
+  summarize(
+    Month = Month,
+    cum_debt_indv = cumsum(debt),
+    cum_debt_indv_normalized = cum_debt_indv / monthly_income * 12,
+    cum_debt_group = cum_debt_indv * pop_prop * pop_size
+  )
+
+ggplot(
+  cum_debts, 
+  aes(x=Month,
+      y=cum_debt_indv_normalized, 
+      color = factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) + 
+  geom_vline(xintercept = 56, color="black", alpha = 0.5, size = 1, linetype = "dashed") + 
+  geom_line() + 
+  scale_color_viridis(discrete = T, option = "C") + 
+  labs(color = "Annual Household \n Income (USD)",
+       y = "Money Paid Over Affordability Threshold \n as % of Annual Income",
+       title = "Cumulative Amount of Money Paid Over the Affordability Threshold \n Normalized by Annual Income") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(
+  cum_debts, 
+  aes(x=Month,
+      y=cum_debt_group, 
+      color = factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) + 
+  geom_vline(xintercept = 56, color="black", alpha = 0.5, size = 1, linetype = "dashed") + 
+  geom_line() + 
+  scale_color_viridis(discrete = T, option = "C") + 
+  labs(color = "Annual Household \n Income (USD)",
+       y = "Money Paid Over Affordability Threshold, \n for income group",
+       title = "Cumulative Amount of Money Paid Over Affordability \n Threshold, by Entire Income Group") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Visualizing non-bill outputs 
+```{r}
+ggplot(output, 
+       aes(
+         x = X,
+         y = release
+       )) + 
+  geom_line()
+```
+

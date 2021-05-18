@@ -1,0 +1,123 @@
+---
+title: "Sensivity_Sacramento_PED"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+library(foreign)
+library(ggplot2)
+
+getwd()
+
+#get all file names
+
+f_names <- list.files()[-100]
+
+all_bills <- c()
+
+for (i in seq(from=1, to=99, by=3)){
+  all_bills[(length(all_bills) + 1)] <- f_names[i]
+}
+
+#sort file names from smallest to largest by PED
+
+negatives <- c()
+positives <- c()
+
+for (b in (1:length(all_bills))) {
+  if (startsWith(all_bills[b], "_")) {
+    negatives[(length(negatives) + 1)] <- all_bills[b]
+  }
+  else {
+    positives[(length(positives) + 1)] <- all_bills[b]
+  }
+}
+
+negatives <- rev(negatives)
+
+ordered_bills <- append(negatives, positives)
+
+#extract PED value
+
+PED <- c()
+
+for (t in (1:length(ordered_bills))) {
+  if (t <= length(negatives)) {
+    PED[(length(PED) + 1)] <- as.numeric(substr(ordered_bills[t], 2, 5))*(-1)
+  }
+  if (t > length(negatives)) {
+    PED[(length(PED) + 1)] <- as.numeric(substr(ordered_bills[t], 0, 4))
+  }
+}
+
+#load all files into a single data frame
+
+f <- file.path("C:/Users/Adam/Documents/Jobs/Fletcher_Lab/hr2w_droughts/outputs/sacramento/sensitivity/PED/5.17", ordered_bills)
+
+d <- lapply(f, read.csv)
+
+#extract months and income buckets from data
+
+months <- d[[2]][,1]
+income_buckets <- names(d[[2]])[-1]
+
+for (y in (1:length(income_buckets))) {
+    income_buckets[y] <- substr(income_buckets[y],2,100)
+}
+
+#calculate percent income across the entire data frame
+
+per_inc <- d
+
+for (i in (1:length(per_inc))) {
+  for (n in (1:ncol(per_inc[[i]][,-1]))) {
+    per <- per_inc[[i]][,n+1]/(as.integer(income_buckets[n])/12)*100
+    per_inc[[i]][,-1][n] <- per
+  }
+}
+
+#create data frame for scatterplot
+
+x_vals <- c()
+
+for (i in (1:length(PED))) {
+  for (n in (1:12)) {
+    x_vals[(length(x_vals) + 1)] <- PED[i]
+  }
+}
+
+y_vals = data.frame(x_vals)
+
+for (k in (1:8)) {
+  before <- c()
+  for (j in (1:length(per_inc))) {
+    before <- c(before, per_inc[[j]][0:12,k+1])
+  }
+  
+  after <- c()
+  for (j in (1:length(per_inc))) {
+    after <- c(after, per_inc[[j]][72:83,k+1])
+  }
+  y_vals <- data.frame(y_vals, before, after)
+}
+
+ggplot(y_vals, aes(x_vals)) + 
+  geom_jitter(aes(y=before), colour="blue") + 
+  geom_jitter(aes(y=after), colour="red") + 
+  labs(x = "PED", y = "Percent Income", title = "12500 Sensitivity")
+
+#execute scatter plot
+
+for (q in (1:16)) {
+  matplot(x_vals, y_vals[q+1], xlab="PED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
+}
+
+for (q in seq(1,16,2)) {
+  plot(x_vals, y_vals[,q+1], xlab = "PED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)])
+  points(x_vals, y_vals[,q+2], col="red")
+}
+```

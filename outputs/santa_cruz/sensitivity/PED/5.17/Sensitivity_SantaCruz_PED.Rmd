@@ -101,7 +101,7 @@ y_vals = data.frame(x_vals)
 for (k in (1:8)) {
   before <- c()
   for (j in (1:length(per_inc))) {
-    before <- c(before, per_inc[[j]][0:12,k+1])
+    before <- c(before, per_inc[[j]][12:23,k+1])
   }
   
   after <- c()
@@ -118,7 +118,7 @@ ggplot(y_vals, aes(x_vals)) +
 
 #execute scatter plot
 
-matplot(d[[2]][,1],d[[2]][,-1], type='l', xlab="Month", ylab="Bill", main="Bills Over Time, YED = 0.43")
+matplot(d[[2]][,1],d[[2]][,-1], type='l', xlab="Month", ylab="Bill", main="Bills Over Time")
 
 for (q in (1:16)) {
   matplot(x_vals, y_vals[q+1], xlab="PED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
@@ -130,13 +130,3 @@ for (q in seq(1,16,2)) {
 }
 
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

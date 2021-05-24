@@ -90,21 +90,3 @@ plot_data <- dcast(plot_data,formula = period+date+scenario+variable ~measuremen
 p1 <- ggplot(plot_data,aes(x=household_demand/748,y=perc_income,color=variable,group=variable))+geom_line()+facet_grid(cols=vars(period))+
   theme_bw();p1
 
-# re-cast for the three periods so I can calculate a difference
-# add a month column
-plot_data$month <- format(plot_data$date,format="%m")
-difference_plot_data_perc_income <- dcast(plot_data,formula = month+variable ~period,value.var="perc_income")
-difference_plot_data_demand <- dcast(plot_data,formula = month+variable ~period,value.var="household_demand")
-
-# now calculate for affordability
-difference_plot_data_perc_income$after_baseline <- difference_plot_data_perc_income$after_baseline -difference_plot_data_perc_income$before
-difference_plot_data_perc_income$after_drought1 <- difference_plot_data_perc_income$after_drought1 -difference_plot_data_perc_income$before
-
-# now re-melt
-difference_plot_data_perc_income <- melt(difference_plot_data_perc_income,id.vars = c("month","variable"))
-# get rid of befores 
-difference_plot_data_perc_income[,3] <- as.character(difference_plot_data_perc_income[,3])
-difference_plot_data_perc_income <- difference_plot_data_perc_income[which(difference_plot_data_perc_income[,3]!=("before")),]
-
-colnames(difference_plot_data_perc_income) <- c("month","income","scenario","income_change")
-difference_plot <- ggplot(difference_plot_data_perc_income,aes(y=income_change,x=income,fill=scenario))+geom_boxplot()+theme_bw()+ylab("% of household income on water");difference_plot

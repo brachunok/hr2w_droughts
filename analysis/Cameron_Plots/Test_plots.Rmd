@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r}
@@ -62,7 +64,7 @@ bills_plot <- ggplot(bills,
 
 demand_plot <- ggplot(demand,
                      aes(x=Month, 
-                         y=Value, 
+                         y=Value / 748, 
                          color=factor(Income, levels = c("12500", "17250", "30000", "42500", "62500", "87500", "125000", "175000")))) +
   geom_vline(xintercept = 56, color="black", alpha = 0.5, size = 1, linetype = "dashed") + 
   geom_line() + 
@@ -70,7 +72,7 @@ demand_plot <- ggplot(demand,
   #scale_color_brewer(palette = "Blues") +
   labs(
     color = "Annual Household \n Income (USD)",
-    y = "Monthly Water Demand (?)",
+    y = "Monthly Water Demand (CCF)",
     title = "Monthly Water Demand \n by Income Group, Sacramento"
   ) + 
   theme(
@@ -120,7 +122,8 @@ ggplot(bills,
   labs(
     fill = "Annual Household \n Income (USD)",
     x = "Annual Household \n Income (USD)",
-    y = "Water Bill (% Monthly Income)"
+    y = "Water Bill (% Monthly Income)",
+    title = "Percent of Monthly Income Spent on Water Bills \n by Income Group, Over 120 Months"
   ) + 
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = "none")
@@ -217,14 +220,4 @@ ggplot(
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-
-Visualizing non-bill outputs 
-```{r}
-ggplot(output, 
-       aes(
-         x = X,
-         y = release
-       )) + 
-  geom_line()
-```
 

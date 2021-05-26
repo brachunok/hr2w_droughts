@@ -1,0 +1,151 @@
+---
+title: "SC_testplots"
+author: "Cameron Tenner"
+date: "5/26/2021"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(plotly)
+library(knitr)
+library(viridis)
+```
+
+```{r}
+bl_bills <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/baseline/hh_bills.csv")
+bl_demands <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/baseline/hh_demand.csv")
+bl_outputs <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/baseline/outputs.csv")
+bl_outputs$Date <- as.Date(as.character(bl_outputs$Date))
+
+d1_bills <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/drought1/hh_bills.csv")
+d1_demands <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/drought1/hh_demand.csv")
+d1_outputs <- read.csv("~/Desktop/Classes/Github/hr2w_droughts/outputs/santa_cruz/drought1/outputs.csv")
+d1_outputs$Date <- as.Date(as.character(d1_outputs$Date))
+
+bl_bills$Date <- as.Date(as.character(bl_outputs$Date))
+d1_bills$Date <- as.Date(as.character(d1_outputs$Date))
+
+bl_bills$Scenario <- "baseline"
+d1_bills$Scenario <- "drought 1"
+
+bills <- rbind(bl_bills, d1_bills)
+```
+
+```{r fig.asp=.5}
+bills <- bills %>% 
+  mutate(
+    Year = as.character(format(Date, "%Y")),
+    Month = format(Date, "%m")
+  ) %>% 
+  filter(
+    Year %in% c("2010", "2015")
+  ) %>% 
+  mutate(
+    period = case_when(
+      Year == "2010" & Scenario == "baseline" ~ "before",
+      Year == "2015" & Scenario == "baseline" ~ "after_baseline",
+      Year == "2015" & Scenario == "drought 1" ~ "after_drought1",
+      T ~ "delete"
+    )
+  ) %>% 
+  filter(
+    period != "delete"
+  ) 
+
+annual_bill <- bills[c(2:17,22)] %>% 
+  group_by(period) %>% 
+  summarize(
+    across(.cols = everything(), ~sum(.x))
+  ) %>% 
+  pivot_longer(
+    -period,
+    names_to = "Income_Bracket",
+    values_to = "Bill"
+  )
+
+incomes <- c(7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000)
+income_col <- rep(incomes,3)
+annual_bill$income <- income_col
+
+annual_bill <- annual_bill %>% 
+  mutate(
+    perc_inc = Bill / income
+  )
+
+bl_perc_inc <- rep((annual_bill %>% filter(period == "before"))$perc_inc, 2)
+bl_bill <- rep((annual_bill %>% filter(period == "before"))$Bill, 2)
+
+annual_bill_plot <- annual_bill %>% 
+  filter(period != "before") %>% 
+  mutate(bl_perc = bl_perc_inc,
+         bl = bl_bill)
+
+ggplot(annual_bill_plot,
+  aes(x=factor(Income_Bracket,levels = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000")),
+      y = perc_inc,
+      fill = period)
+) + 
+  geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge", dotsize = .7) + 
+  geom_hline(yintercept = 0.02) + 
+  geom_errorbar(data = annual_bill_plot %>% filter(period == "after_baseline"), aes(x=Income_Bracket, ymin = bl_perc, ymax = bl_perc))
+
+rects <- data.frame(xstart = seq(0.5,15.5,1), xend = seq(1.5,16.5,1), cols = rep(c("black","grey"),8))
+
+ggplot(annual_bill_plot,
+  aes(x=factor(Income_Bracket,levels = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000")),
+      y = Bill,
+      fill = period)
+) + 
+  geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge", dotsize = .7) + 
+  geom_errorbar(data = annual_bill_plot %>% filter(period == "after_baseline"), aes(x=Income_Bracket, ymin = bl, ymax = bl)) 
+
+
+
+ggplot() + 
+  geom_dotplot(
+    data = annual_bill_plot, 
+    aes(x=factor(Income_Bracket,levels = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000")),
+      y = Bill,
+      fill = period),
+    binaxis = "y", 
+    stackdir = "center", 
+    position = "dodge", 
+    dotsize = .7) + 
+    geom_rect(data=rects, aes(ymin=0, ymax=4000, xmin=xstart,
+                    xmax=xend, fill=cols), alpha =0.5) +
+    geom_errorbar(data = annual_bill_plot %>% filter(period == "after_baseline"), aes(x=Income_Bracket, ymin = bl, ymax = bl)) +
+  geom_dotplot(
+    data = annual_bill_plot, 
+    aes(x=factor(Income_Bracket,levels = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000")),
+      y = Bill,
+      fill = period),
+    binaxis = "y", 
+    stackdir = "center", 
+    position = "dodge", 
+    dotsize = .7) +
+  scale_color_viridis(discrete = T, option = "C")
+```
+
+redo this pre pivot
+```{r}
+bef_bill <- rep((annual_bill %>% filter(period == "before"))$Bill, 3)
+
+annual_bill_dist <- annual_bill[1:3] %>% 
+  filter(period != "before") %>% 
+  rbind(
+    tibble(
+      period = rep("affordable", 16),
+      Income_Bracket = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000"),
+      Bill = (incomes * 0.025)
+    )
+  ) %>% 
+  mutate(
+  before_bill = bef_bill,
+  dist = Bill - bef_bill,
+  )
+
+ggplot(annual_bill_dist,
+       aes(x=factor(Income_Bracket,levels = c("X7500","X12500","X17500","X22500","X27500","X32500","X37500","X42500","X47500","X55000","X67500","X87500","X112500","X137500","X175000","X250000")), y=dist, fill = period))+ 
+  geom_col(position = "dodge")
+```
+

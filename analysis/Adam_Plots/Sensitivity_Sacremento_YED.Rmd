@@ -1,5 +1,5 @@
 ---
-title: "Sensitivity_SantaCruz_YED"
+title: "Sensitivity_Sacramento_YED"
 output: html_document
 ---
 
@@ -7,11 +7,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## YED Sensitivity Santa Cruz
+## Sacramento Sensitivity YED
 
-This document includes plots of the sensitivity analysis for the YED value for Santa Cruz for both before and after the California drought.
+This is a sensitivity analysis for YED and affordability for Sacramento for before and after a simulated drought.
 
-```{r sensitivity, echo = FALSE}
+```{r cars, echo = FALSE}
+
+#navigate to outputs/sacramento/sensitivity/YED/5.17 on your computer
+setwd()
+
 library(foreign)
 library(ggplot2)
 
@@ -60,7 +64,7 @@ for (t in (1:length(ordered_bills))) {
 
 #load all files into a single data frame
 
-f <- file.path("C:/Users/Adam/Documents/Jobs/Fletcher_Lab/hr2w_droughts/outputs/santa_cruz/sensitivity/YED/5.17", ordered_bills)
+f <- file.path("C:/Users/Adam/Documents/Jobs/Fletcher_Lab/hr2w_droughts/outputs/sacramento/sensitivity/YED/5.17", ordered_bills)
 
 d <- lapply(f, read.csv)
 
@@ -96,10 +100,10 @@ for (i in (1:length(YED))) {
 
 y_vals = data.frame(x_vals)
 
-for (k in (1:16)) {
+for (k in (1:8)) {
   before <- c()
   for (j in (1:length(per_inc))) {
-    before <- c(before, per_inc[[j]][12:23,k+1])
+    before <- c(before, per_inc[[j]][0:12,k+1])
   }
   
   after <- c()
@@ -117,19 +121,15 @@ ggplot(y_vals, aes(x_vals)) +
   geom_jitter(aes(y=after), colour="red") + 
   labs(x = "YED", y = "Percent Income", title = "12500 Sensitivity")
 
-#This creates a line plot of bills over time for YED =o
-#matplot(d[[2]][,1],d[[2]][,-1], type='l', xlab="Month", ylab="Bill", main="Bills Over Time")
-
 #This creates individual plots for each before and after graph
-# for (q in (1:32)) {
+# for (q in (1:16)) {
 #   matplot(x_vals, y_vals[q+1], xlab="YED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
 # }
 
-for (q in seq(1,32,2)) {
+for (q in seq(1,16,2)) {
   plot(x_vals, y_vals[,q+1], xlab = "YED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)], xlim=c(min(x_vals), max(x_vals)), ylim=c(min(y_vals[,q+1],y_vals[,q+2]), max(y_vals[,q+1],y_vals[,q+2])))
   points(x_vals, y_vals[,q+2], col="red")
 }
+
 ```
-
-
 

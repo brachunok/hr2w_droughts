@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r cars}
+```{r cars, echo = FALSE}
 library(foreign)
 library(ggplot2)
 
@@ -105,19 +105,21 @@ for (k in (1:8)) {
   y_vals <- data.frame(y_vals, before, after)
 }
 
+#execute scatter plot
+
+#This creates a prettier jitter plot for the first income bucket
 ggplot(y_vals, aes(x_vals)) + 
   geom_jitter(aes(y=before), colour="blue") + 
   geom_jitter(aes(y=after), colour="red") + 
   labs(x = "PED", y = "Percent Income", title = "12500 Sensitivity")
 
-#execute scatter plot
-
-for (q in (1:16)) {
-  matplot(x_vals, y_vals[q+1], xlab="PED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
-}
+#This creates individual plots for each before and after graph
+# for (q in (1:16)) {
+#   matplot(x_vals, y_vals[q+1], xlab="PED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
+# }
 
 for (q in seq(1,16,2)) {
-  plot(x_vals, y_vals[,q+1], xlab = "PED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)])
+  plot(x_vals, y_vals[,q+1], xlab = "PED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)], xlim=c(min(x_vals), max(x_vals)), ylim=c(min(y_vals[,q+1],y_vals[,q+2]), max(y_vals[,q+1],y_vals[,q+2])))
   points(x_vals, y_vals[,q+2], col="red")
 }
 ```

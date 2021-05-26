@@ -7,13 +7,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Sacramento Sensitivity YED
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This is a sensitivity analysis for YED and affordability for Sacramento for before and after a simulated drought.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
+```{r cars, echo = FALSE}
 library(foreign)
 library(ggplot2)
 
@@ -111,30 +109,23 @@ for (k in (1:8)) {
   y_vals <- data.frame(y_vals, before, after)
 }
 
+#execute scatter plot
+
+#This creates a prettier jitter plot for the first income bucket
 ggplot(y_vals, aes(x_vals)) + 
   geom_jitter(aes(y=before), colour="blue") + 
   geom_jitter(aes(y=after), colour="red") + 
   labs(x = "YED", y = "Percent Income", title = "12500 Sensitivity")
 
-#execute scatter plot
-
-for (q in (1:16)) {
-  matplot(x_vals, y_vals[q+1], xlab="YED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
-}
+#This creates individual plots for each before and after graph
+# for (q in (1:16)) {
+#   matplot(x_vals, y_vals[q+1], xlab="YED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
+# }
 
 for (q in seq(1,16,2)) {
-  plot(x_vals, y_vals[,q+1], xlab = "YED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)])
+  plot(x_vals, y_vals[,q+1], xlab = "YED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)], xlim=c(min(x_vals), max(x_vals)), ylim=c(min(y_vals[,q+1],y_vals[,q+2]), max(y_vals[,q+1],y_vals[,q+2])))
   points(x_vals, y_vals[,q+2], col="red")
 }
 
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

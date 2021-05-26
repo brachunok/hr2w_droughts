@@ -15,6 +15,9 @@ This document includes plots of the sensitivity analysis for the YED value for S
 library(foreign)
 library(ggplot2)
 
+#navigate to outputs/santa_cruz/sensitivity/YED/5.17 on your computer
+setwd()
+
 getwd()
 
 #get all file names

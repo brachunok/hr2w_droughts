@@ -1,5 +1,5 @@
 ---
-title: "Sensitivity_SantaCruz_YED"
+title: "Sensitivity_SantaCruz_PED"
 output: html_document
 ---
 
@@ -7,13 +7,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## YED Sensitivity Santa Cruz
+## Santa Cruz PED Sensativity Analysis
 
-This document includes plots of the sensitivity analysis for the YED value for Santa Cruz for both before and after the California drought.
+This document includes scatter plots for affordability versus PED for all income buckets for Santa Cruz for before and after the drought event.
 
-```{r sensitivity, echo = FALSE}
+```{r sensitivity, echo=FALSE}
 library(foreign)
 library(ggplot2)
+
+#navigate to outputs/santa_cruz/sensitivity/PED/5.17 on your computer
+setwd()
 
 getwd()
 
@@ -27,7 +30,7 @@ for (i in seq(from=1, to=99, by=3)){
   all_bills[(length(all_bills) + 1)] <- f_names[i]
 }
 
-#sort file names from smallest to largest by YED
+#sort file names from smallest to largest by PED
 
 negatives <- c()
 positives <- c()
@@ -45,22 +48,22 @@ negatives <- rev(negatives)
 
 ordered_bills <- append(negatives, positives)
 
-#extract YED value
+#extract PED value
 
-YED <- c()
+PED <- c()
 
 for (t in (1:length(ordered_bills))) {
   if (t <= length(negatives)) {
-    YED[(length(YED) + 1)] <- as.numeric(substr(ordered_bills[t], 2, 5))*(-1)
+    PED[(length(PED) + 1)] <- as.numeric(substr(ordered_bills[t], 2, 5))*(-1)
   }
   if (t > length(negatives)) {
-    YED[(length(YED) + 1)] <- as.numeric(substr(ordered_bills[t], 0, 4))
+    PED[(length(PED) + 1)] <- as.numeric(substr(ordered_bills[t], 0, 4))
   }
 }
 
 #load all files into a single data frame
 
-f <- file.path("C:/Users/Adam/Documents/Jobs/Fletcher_Lab/hr2w_droughts/outputs/santa_cruz/sensitivity/YED/5.17", ordered_bills)
+f <- file.path("C:/Users/Adam/Documents/Jobs/Fletcher_Lab/hr2w_droughts/outputs/santa_cruz/sensitivity/PED/5.17", ordered_bills)
 
 d <- lapply(f, read.csv)
 
@@ -88,9 +91,9 @@ for (i in (1:length(per_inc))) {
 
 x_vals <- c()
 
-for (i in (1:length(YED))) {
+for (i in (1:length(PED))) {
   for (n in (1:12)) {
-    x_vals[(length(x_vals) + 1)] <- YED[i]
+    x_vals[(length(x_vals) + 1)] <- PED[i]
   }
 }
 
@@ -115,21 +118,20 @@ for (k in (1:16)) {
 ggplot(y_vals, aes(x_vals)) + 
   geom_jitter(aes(y=before), colour="blue") + 
   geom_jitter(aes(y=after), colour="red") + 
-  labs(x = "YED", y = "Percent Income", title = "12500 Sensitivity")
+  labs(x = "PED", y = "Percent Income", title = "12500 Sensitivity")
 
-#This creates a line plot of bills over time for YED =o
+#This creates a line plot of bills over time for PED =o
 #matplot(d[[2]][,1],d[[2]][,-1], type='l', xlab="Month", ylab="Bill", main="Bills Over Time")
 
 #This creates individual plots for each before and after graph
 # for (q in (1:32)) {
-#   matplot(x_vals, y_vals[q+1], xlab="YED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
+#   matplot(x_vals, y_vals[q+1], xlab="PED", ylab="Percent Income", main=income_buckets[(q/2+0.5)])
 # }
 
+#This creates the comparison plots for each income bucket before and after the drought
 for (q in seq(1,32,2)) {
-  plot(x_vals, y_vals[,q+1], xlab = "YED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)], xlim=c(min(x_vals), max(x_vals)), ylim=c(min(y_vals[,q+1],y_vals[,q+2]), max(y_vals[,q+1],y_vals[,q+2])))
+  plot(x_vals, y_vals[,q+1], xlab = "PED", ylab = "Percent Income", main=income_buckets[(q/2+0.5)], xlim=c(min(x_vals), max(x_vals)), ylim=c(min(y_vals[,q+1],y_vals[,q+2]), max(y_vals[,q+1],y_vals[,q+2])))
   points(x_vals, y_vals[,q+2], col="red")
 }
+
 ```
-
-
-

@@ -13,7 +13,7 @@ library(tidyverse)
 library(tigris)
 library(censusapi)
 library(sf)
-library(mapview)
+#library(mapview)
 library(plotly)
 library(leaflet)
 library(tidycensus)
@@ -32,12 +32,12 @@ bg <-
   ) %>% 
   st_as_sf()
 
-sc_water <- st_read("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/santa_cruz/California_Drinking_Water_System_Area_Boundaries/California_Drinking_Water_System_Area_Boundaries.shp") %>% 
-  filter(
-    WATER_SY_1 == "SANTA CRUZ WATER DEPARTMENT"
-  ) %>% 
-  st_as_sf() %>% 
-  st_transform(4269)
+# sc_water <- st_read("/Users/ctenner/Desktop/Classes/Github/hr2w_droughts/data/santa_cruz/California_Drinking_Water_System_Area_Boundaries/California_Drinking_Water_System_Area_Boundaries.shp") %>% 
+#   filter(
+#     WATER_SY_1 == "SANTA CRUZ WATER DEPARTMENT"
+#   ) %>% 
+#   st_as_sf() %>% 
+#   st_transform(4269)
 ```
 
 Create subset of Glendale blockgroups, meaning all blockgroups that have any overlap whatsoever with Glendale Water District
@@ -59,7 +59,7 @@ sc_bg <-
 
 preview the overlap/ selection
 ```{r}
-mapview(list(sc_bg, sc_water))
+mapview(list(bg))
 ```
 Issues at play: coastal blockgroups (ocean) and rural blockgroups (open space dominated)
 

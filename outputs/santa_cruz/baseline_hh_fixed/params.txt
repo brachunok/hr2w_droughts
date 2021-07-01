@@ -1,0 +1,21 @@
+Date: 
+26/05/2021 16:26:58
+/n
+['Cutoffs: ', array([ 0,  5, 15, 25, 35, 50])]
+['res reductions: ', 0      0
+5      5
+15    16
+25    27
+35    38
+50    52
+Name: res_reductions, dtype: int64]
+['Decision file: ', PosixPath('/Users/brachuno/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/sc_decisions.csv')]
+['Scenario: ', 'baseline']
+['Output Folder: ', 'baseline_hh_fixed']
+['YED: ', 0.43]
+['PED: ', 0.41]
+['Populations: ', array([ 6432.8 ,  4482.56,  3960.32,  3495.2 ,  3873.28,  2793.44,
+        2768.96,  2929.44,  2377.28,  5252.32,  6397.44, 11054.08,
+        8459.2 ,  5687.52,  8875.36, 13314.4 ])]
+['Household Sizes: ', array([0.816, 0.816, 0.816, 0.816, 0.816, 0.816, 0.816, 0.816, 0.816,
+       0.816, 0.816, 0.816, 0.816, 0.816, 0.816, 0.816])]

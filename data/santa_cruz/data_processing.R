@@ -109,4 +109,118 @@ df_sources$feltonDiversions <- (df$`d5$volume16601`+df$`d6$volume16123`)/3.06888
 df_sources$newellInflow <- df$`d7$volume9847`
 df_sources$newellUsed   <- df$`d7$newellUsed`
 
-write.csv(df_sources,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/sc_input_data.csv")
+#write.csv(df_sources,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/sc_input_data_baseline.csv")
+
+# break these down into time serieses ------------------------------------------
+nc_ts <- ts(df_sources[,c(2)],frequency = 12)
+nc_ts_components <- decompose(nc_ts)
+
+ts_ts <- ts(df_sources$taitStreet,frequency = 12)
+ts_ts_components <- decompose(ts_ts)
+
+ll_ts <- ts(df_sources$newellInflow+df_sources$feltonDiversions,frequency = 12)
+ll_ts_components <- decompose(ll_ts)
+
+# "non drought" years: 2010
+nd_rows <- which(format(df_sources$date,"%Y")%in%c("2010"))
+#nd_rows_ts <-
+# "Drought" years: 2015
+d_rows <- which(format(df_sources$date,"%Y")%in%c("2013","2014","2015","2016"))
+
+# seasonally adjust each -------------------------------------------------------
+nc_ts_sa <- nc_ts - nc_ts_components$seasonal 
+ts_ts_sa <- ts_ts - ts_ts_components$seasonal
+ll_ts_sa <- ll_ts - ll_ts_components$seasonal
+
+#  Calculate a 'baseline' mean 
+
+nc_ts_baseline <- mean(nc_ts_sa[nd_rows])
+ts_ts_baseline <- mean(ts_ts_sa[nd_rows])
+ll_ts_baseline <- mean(ll_ts_sa[nd_rows])
+
+nc_ts_sa <- nc_ts_sa - nc_ts_baseline
+ts_ts_sa <- ts_ts_sa - ts_ts_baseline
+ll_ts_sa <- ll_ts_sa - ll_ts_baseline
+
+# now make a drought of greater intensity 
+reduction_factor <- .5
+nc_ts_sa_intense <- nc_ts_sa
+nc_ts_sa_intense[d_rows] <- nc_ts_sa[d_rows] - abs(nc_ts_sa[d_rows])*reduction_factor
+
+ts_ts_sa_intense <- ts_ts_sa
+ts_ts_sa_intense[d_rows] <- ts_ts_sa[d_rows]- abs(ts_ts_sa[d_rows])*reduction_factor
+
+
+
+ll_ts_sa_intense <- ll_ts_sa
+ll_ts_sa_intense[d_rows] <- ll_ts_sa[d_rows]-abs(ll_ts_sa[d_rows])*reduction_factor
+
+
+# re-introduce the seasonality
+nc_ts_intense <- nc_ts_sa_intense+nc_ts_components$seasonal + nc_ts_baseline
+
+ll_ts_intense <- ll_ts_sa_intense + ll_ts_components$seasonal + ll_ts_baseline
+ll_ts_intense[which(ll_ts_intense<=0)] <- 0
+
+ts_ts_intense <- ts_ts_sa_intense + ts_ts_components$seasonal + ts_ts_baseline
+
+# now make plots 
+plot(nc_ts_intense,col="red")
+lines(nc_ts,col='black')
+
+plot(ts_ts_intense,col="red")
+lines(ts_ts,col="black")
+
+plot(ll_ts_intense,col="red")
+lines(ll_ts,col="black")
+
+df_sources_intense <- df_sources
+df_sources_intense$northCoast <- as.numeric(nc_ts_intense)
+df_sources_intense$taitStreet <- as.numeric(ts_ts_intense)
+df_sources_intense$newellInflow <- as.numeric(nc_ts_intense)
+
+
+# baseline looks like this: 
+# 2009,10,11,12 -- 14,15,16 --2009,10,11,12
+
+pre_years  <- which(format(df_sources$date,"%Y")%in%c("2009","2010","2011","2012"))
+mid_years  <- which(format(df_sources$date,"%Y")%in%c("2014","2015"))
+post_years <- which(format(df_sources$date,"%Y")%in%c("2009","2010","2011","2012"))
+post_years_long <- which(format(df_sources$date,"%Y")%in%c("2009","2010"))
+
+df_sources_baseline <- df_sources[c(pre_years,mid_years,post_years),]
+# intense looks like this
+#  2009,10,11,12 --14a,15a,16a --2009,10,11,12
+
+df_sources_intense_output <- rbind(df_sources[c(pre_years),],df_sources_intense[mid_years,],df_sources[post_years,])
+
+# long looks like this
+#  2009,10,11,12 --14,15,16,14,15,16 --2009
+df_sources_long <- rbind(df_sources[c(pre_years),],df_sources[mid_years,],df_sources[mid_years,],df_sources[post_years_long,])
+
+# long+ intense looks like this
+# 2009,10,11,12 --14a,15a,16a,14a,15a,16a -- 2009
+df_sources_long_intense <- rbind(df_sources[c(pre_years),],df_sources_intense[mid_years,],df_sources_intense[mid_years,],df_sources[post_years_long,])
+
+# now write appropriate dates for each and write them to files.
+df_sources_baseline$date <- df_sources$date[1:120]
+df_sources_intense$date <- df_sources$date[1:120]
+df_sources_long$date <- df_sources$date[1:120]
+df_sources_long_intense$date <- df_sources$date[1:120]
+
+# write 
+
+write.csv(df_sources_baseline,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/baseline.csv")
+write.csv(df_sources_intense_output,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/intense.csv")
+write.csv(df_sources_long,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/long.csv")
+write.csv(df_sources_long_intense,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/long_intense.csv")
+
+
+# make a few plots 
+plot(df_sources_intense_output$taitStreet~df_sources_baseline$date,type="l",col="red")
+lines(df_sources_long$taitStreet~df_sources_baseline$date,type="l",col="blue")
+lines(df_sources_baseline$taitStreet~df_sources_baseline$date,type="l",col="black")
+lines(df_sources_long_intense$taitStreet~df_sources_baseline$date,type="l",col="green")
+
+
+

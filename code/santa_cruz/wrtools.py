@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 
 class City:
-    def __init__(self, demand,income_elasticity):
+    def __init__(self, demand,income_elasticity,MHI):
         self.demand = demand # current demand for the city
         #self.inflow = inflow # current inflow
         self.income_elasticity = income_elasticity
+        self.MHI = MHI
+
     def set_restriction(self,restriction):
         self.restriction = restriction
 
@@ -13,9 +15,9 @@ class City:
         # counts are the number of each class, income are the incomes
         # of each class
         self.counts = counts # number of each household
-        self.income = incomes
+        self.income = np.array(incomes)
         self.household_sizes = household_sizes
-        self.i_bar = np.mean(incomes)
+        self.i_bar = self.MHI
         self.income_percentages = np.divide(self.income-self.i_bar,self.i_bar)
         # ^^ percentage change from MHI
         self.leakage_volumes = leaks
@@ -451,7 +453,7 @@ class Utility:
         baseline['adjusted_revenue'] = 0
         # now compute for whole city for each
         for h in range(len(baseline['mean'])):
-            # calculate baseline use for one
+            # calculate baseline use for one year
             monthly_baseline = baseline['mean'].iloc[h]
             monthly_adjusted = baseline['adjusted'].iloc[h]
 

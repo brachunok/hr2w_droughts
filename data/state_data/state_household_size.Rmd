@@ -1,0 +1,129 @@
+---
+title: "State_household_size"
+author: "Cameron Tenner"
+date: "5/3/2021"
+output: html_document
+---
+
+```{r setup, include = F}
+library(knitr)
+opts_chunk$set(echo = T, warning = F, message = F)
+
+library(tidyverse)
+library(tigris)
+library(censusapi)
+library(sf)
+library(mapview)
+library(plotly)
+library(leaflet)
+library(tidycensus)
+
+options(
+  tigris_class = "sf",
+  tigris_use_cache = T 
+)
+```
+
+```{r}
+bg <-
+  block_groups("CA", cb=F, progress_bar=T) %>% 
+  st_as_sf()
+
+```
+
+preview the block groups (this takes a long time to load )
+```{r}
+mapview(list(bg))
+```
+
+
+Now we load in income data from census table B19001
+```{r}
+hh_income_bg <- get_acs(geography="county",year=2019,state="California",table="B19001", output="wide")
+
+sc_data <- sc_bg %>% 
+  left_join(sc_hh_income) %>% 
+  st_drop_geometry()
+
+# Define function for finding num households based on census data and % intersect
+fx <- function(x, y) (round(x * y / 100,0))
+
+# Mutate all census columns by multiplying by % intersect 
+sc_data <- sc_data %>% 
+  mutate(
+    across(
+    6:22,
+    ~ fx(.x,y=PERC_INT)
+  )) %>% 
+  select(
+    - B19001_001E
+  )
+
+sc_hh_sum <- tibble(
+  hh_income = c("7.5k", "12.5k", "17.5k", "22.5k", "27.5k", "32.5k", "37.5k", "42.5k", "47.5k", "55k", "67.5k", "87.5k", "112.5k", "137.5k", "175k", "250k"),
+  count = colSums(sc_data[,6:21])
+  )
+```
+
+
+Load in table of interest from **tidycensus** and subset to tracts identified above
+```{r}
+sc_in_hh_size <- get_acs(geography="tract",year=2018,state="California",table="B19019",county="Santa Cruz") %>% 
+  filter(
+    GEOID %in% sc_tracts$GEOID,
+    variable != "B19019_001"
+  )
+```
+
+Associate each variable name with the corresponding hh size 
+```{r}
+sizes <- tibble(
+  size=c(1:7),
+  varible=unique(sc_in_hh_size$variable)
+)
+
+sc_in_hh_size$size <- 0
+for(i in 1:nrow(sizes)){
+  sc_in_hh_size$size[which(sc_in_hh_size$variable==sizes$varible[i])] <- sizes$size[i]
+}
+```
+
+Assign income bins to each observation
+```{r}
+sc_in_hh_size <- 
+  sc_in_hh_size %>% 
+  mutate(
+    income_bracket = case_when(
+      estimate < 10000 ~ 7.5,
+      estimate >= 10000 & estimate < 15000 ~ 12.5,
+      estimate >= 15000 & estimate < 20000 ~ 17.5,
+      estimate >= 20000 & estimate < 25000 ~ 22.5,
+      estimate >= 25000 & estimate < 30000 ~ 27.5,
+      estimate >= 30000 & estimate < 35000 ~ 32.5,
+      estimate >= 35000 & estimate < 40000 ~ 37.5,
+      estimate >= 40000 & estimate < 45000 ~ 42.5,
+      estimate >= 45000 & estimate < 50000 ~ 47.5,
+      estimate >= 50000 & estimate < 60000 ~ 55,
+      estimate >= 60000 & estimate < 75000 ~ 67.5,
+      estimate >= 75000 & estimate < 100000 ~ 87.5,
+      estimate >= 100000 & estimate < 125000 ~ 112.5,
+      estimate >= 125000 & estimate < 150000 ~ 137.5,
+      estimate >= 150000 & estimate < 200000 ~ 175,
+      estimate >= 200000 ~ 250
+    )
+  )
+```
+
+Find average hh size for each income bin 
+```{r}
+income_hh_size_summary <-   
+  sc_in_hh_size %>% 
+  group_by(income_bracket) %>% 
+  summarize(
+    hh_size = round(mean(size),2),
+    count = n()
+  ) 
+print.data.frame(income_hh_size_summary)
+```
+
+# try IPUMS pakcage 

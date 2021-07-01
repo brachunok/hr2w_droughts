@@ -2,10 +2,12 @@ import numpy as np
 import pandas as pd
 
 class City:
-    def __init__(self, demand,income_elasticity):
+    def __init__(self, demand,income_elasticity,MHI):
         self.demand = demand # current demand for the city
         #self.inflow = inflow # current inflow
         self.income_elasticity = income_elasticity
+        self.MHI = MHI
+
     def set_restriction(self,restriction):
         self.restriction = restriction
 
@@ -15,7 +17,7 @@ class City:
         self.counts = counts # number of each household
         self.income = incomes
         self.household_sizes = household_sizes
-        self.i_bar = np.mean(incomes)
+        self.i_bar = self.MHI
         self.income_percentages = np.divide(self.income-self.i_bar,self.i_bar)
         # ^^ percentage change from MHI
         self.leakage_volumes = leaks

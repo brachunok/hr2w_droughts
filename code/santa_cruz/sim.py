@@ -1,6 +1,6 @@
 # packages
 import os, sys
-#sys.path.append("/Users/brachuno/Documents/__college/reseach_stuff/water-equity/code")
+#sys.path.append("/Users/brachuno/Documents/__college/hr/water-equity/code")
 
 import datetime
 import math
@@ -16,6 +16,10 @@ repo_home = Path("./").absolute().parents[1]
 # ^^ may not work if you are runnign interactively. Should work if you run the script all as once
 # i.e. click 'run' vs running line by line
 
+#"L" is the lines we write to the outputs text file
+today = datetime.datetime.now()
+L = ["Date: ",today.strftime("%d/%m/%Y %H:%M:%S"),"/n"]
+
 # cutoffs
 cutoffs = np.array([0,5,15,25,35,50])
 
@@ -23,18 +27,38 @@ conservation_policies = pd.DataFrame(index= cutoffs)
 conservation_policies['res_reductions']=np.array([0,5,16,27,38,52])
 conservation_policies['other_reductions']=[0,5,15,25,35,50]
 
+#conservation_policies['res_reductions']=np.array([0,5,12,27,38,52])
+            #conservation_policies['other_reductions']=[0,5,12,25,35,50]
+
+L.append(["Cutoffs: ",cutoffs])
+L.append(["res reductions: ",conservation_policies['res_reductions']])
+
 # read in the decisionmaking file
-decisions = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_decisions.csv')
+decision_file = repo_home / 'data'/'santa_cruz'/'sc_decisions.csv'
+decisions = pd.read_csv(decision_file)
+
+L.append(["Decision file: ", decision_file])
 
 # name the one we want 'conserve_stage'
-scenario = 'drought1'
+scenario = 'baseline'
+#scenario = 'drought1'
+L.append(["Scenario: ",scenario])
 decisions['conserve_stage']=decisions[scenario]
-# THIS IS HOW WE PICK THE SCENARIOS
 
+# THIS IS HOW WE PICK THE SCENARIOS
+output_folder='baseline'
+#output_folder = 'drought_custom'
+#output_folder='drought1'
+
+L.append(['Output Folder: ',output_folder])
 
 # threshold for making an economic decision
-YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
-PED= 0.41  # the mean values of their analysis
+#YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
+YED = 0.1 # .1 comes from wicham 'water affordability in the united states'
+PED= 0.4  # the mean values of their analysis
+
+L.append(["YED: ",YED])
+L.append(["PED: ",PED])
 
 # read in the input data
 input_data = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_input_data.csv')
@@ -47,6 +71,9 @@ input_data['date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors
 baseline_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'rcpgd_sc.csv')
 baseline_demand.columns = ["reporting_month","mean"]
 # units are GPCD`
+
+# scale up seasonality pattern so that residential demand matches
+#baseline_demand['mean'] = baseline_demand['mean']*1.32
 
 # initialize my dataframe of outputs
 outputs = pd.DataFrame(columns=['Date','totalDemand','residentialDemand','otherDemand','surface','ground',
@@ -80,19 +107,26 @@ other_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_non_res_d
 et = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_et.csv')
 
 # now for my cities
-city = City(1,YED)#
+city = City(1,YED,61000.01)#
+
+# TODO: need to set so that the dmeand is calculated based on a pre-specified MHI
+# not just the mean of ht bins
 
 #change reservoir size and set volume
 reservoir = Reservoir(2800,20) # Loch Lomond. Capacity in MG and monthly env release in MG
 reservoir.set_volume(2800)
 
 
-# total number of people living in each household size (
-populations = [2365,1648,1456,1285,1424,1027,1018,1077,874,1931,2352,4064,3110,2091,3263,4895]
+# total number of houses of each size
+populations = np.array([2365,1648,1456,1285,1424,1027,1018,1077,874,1931,2352,4064,3110,2091,3263,4895])
+populations = np.multiply(populations,1)
+L.append(["Populations: ",populations])
 
 # sizes from the get_acs_data script
-household_sizes = [1,3,3,3,1,1,1.67,1.4,1,1.57,1.86,3.17,3,3.57,4.58,5.38]
+#household_sizes = [1.533492 ,1.770660 ,1.727516, 2.583219, 2.342015, 2.953631, 2.050650, 2.170571, 3.291193, 2.528014 ,2.455181, 2.765476, 3.049735 ,2.922616, 2.993665, 3.077490]
+household_sizes = [1.870420, 1.875249, 2.201320, 2.373557 ,2.483636 ,2.583789 ,2.678085, 2.736607, 2.687910 ,2.792010, 2.883071, 2.947434, 3.085348, 3.139869 ,3.206045, 3.180690]
 
+L.append(["Household Sizes: ",household_sizes])
 #populations = [ 7652. , 13583., 14923., 21236., 33672., 26211., 33280., 16262.]
 #populations = np.divide(populations,household_sizes)
 
@@ -130,6 +164,7 @@ res_reduction = 0
 nonres_reduction = 0
 
 print("Running scenario: ",scenario)
+
 
 # we do this for every month
 for m in range(outputs['Date'].count()):
@@ -174,7 +209,7 @@ for m in range(outputs['Date'].count()):
         outputs.loc[outputs.index==m,'annualRevenueLost']=yearly_cost_of_conservation
 
         # update my rate structure
-        household_cost = additional_monthly_cost/np.multiply(city.household_sizes,city.counts).sum()
+        household_cost = additional_monthly_cost/city.counts.sum()
         # ^^ this is costs per month/household
 
         # pass costs on in the fixed cost for right now
@@ -301,8 +336,9 @@ for m in range(outputs['Date'].count()):
 
 
 
-
 # record the outputs
-outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario /"outputs.csv")
-hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario / "hh_demand.csv")
-hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ scenario / "hh_bills.csv")
+with open(repo_home / 'outputs'/'santa_cruz'/output_folder/"params.txt","w") as filehandle:
+    filehandle.writelines("%s\n" % param for param in L)
+outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ output_folder /"outputs.csv")
+hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ output_folder / "hh_demand.csv")
+hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ output_folder / "hh_bills.csv")

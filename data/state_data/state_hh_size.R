@@ -5,7 +5,7 @@
 if (!require("ipumsr")) stop("Reading IPUMS data into R requires the ipumsr package. It can be installed using the following command: install.packages('ipumsr')")
 setwd("~/Documents/__college/reseach_stuff/hr2w_droughts/data/state_data")
 ddi <- read_ipums_ddi("usa_00005.xml")
-df <- read_ipums_micro_list(ddi)
+df <- read_ipums_micro_list(ddi) #if this doesn't work, go into the folder and click 'download' so it doesn't get automatically uploaded to icloud
 dfp  <- df$PERSON 
 dfh <- df$HOUSEHOLD
 #ipums_view(ddi)
@@ -185,6 +185,7 @@ model1 <- glm(bin3~SEX+AGE+RACE+HISPAN+SCHOOL+EDUC+aggregate_disability,data=thi
 library('hutils')
 library('labelled')
 library('ggplot2')
+library(e1071)     
 
 ca_dfh <- dfh[which(dfh$STATEFIP==6),]
 ca_dfh_weighted <- weight2rows(ca_dfh,weight.var = "HHWT")
@@ -220,7 +221,6 @@ ca_dfh_weighted_melt <- ca_dfh_weighted[,c(11,19,20)]
 # now make histograms
 ca_dfh_weighted_melt_aggregated <- table(ca_dfh_weighted_melt$bin,ca_dfh_weighted_melt$COUNTYFIP)
 
-  
 for (j in 1:ncol(ca_dfh_weighted_melt_aggregated)){
   ca_dfh_weighted_melt_aggregated[,j] <- ca_dfh_weighted_melt_aggregated[,j]/sum(ca_dfh_weighted_melt_aggregated[,j])
 }
@@ -229,7 +229,23 @@ for (j in 1:ncol(ca_dfh_weighted_melt_aggregated)){
 ca_dfh_weighted_melt_aggregated <- melt(ca_dfh_weighted_melt_aggregated)
 #ca_dfh_weighted_melt_aggregated$Var1 <- factor(ca_dfh_weighted_melt_aggregated$Var1,levels =c("Deep Poverty","Poverty","Near Poverty","Middle Class","Upper Class"))
 
-# get rid of fips 0 because idk what it means
+dist_stats <- data.frame(county= colnames(ca_dfh_weighted_melt_aggregated))
+dist_stats$skewness <- 0
+dist_stats$kurtosis <- 0
+
+for (j in 1:ncol(ca_dfh_weighted_melt_aggregated)){
+  dist_stats$skewness[j] <- skewness(ca_dfh_weighted_melt_aggregated[,j])
+  dist_stats$kurtosis[j] <- kurtosis(ca_dfh_weighted_melt_aggregated[,j])
+}
+
+# picking the ones with high income % (FIPS17) El Dorado County
+# the one with low kurtosis FIPS 55 (Napa County)
+# and the one with a high low-income percenage (27) Inyo
+
+distributions <-ca_dfh_weighted_melt_aggregated[,c(5,15,27)]
+colnames(distributions) <- c("high_income","low_kurtosis","low_income")
+write.csv(x = distributions,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/state_data/three_distributions.csv")
+
 
 ca_dfh_weighted_melt_aggregated <- ca_dfh_weighted_melt_aggregated[which(ca_dfh_weighted_melt_aggregated$Var2!=0),]
 #ca_dfh_weighted_melt_aggregated <- ca_dfh_weighted_melt_aggregated[which(ca_dfh_weighted_melt_aggregated$Var2%in%c(37,53,67,19,59,85,87)),]

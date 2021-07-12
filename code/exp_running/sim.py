@@ -66,8 +66,8 @@ parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parame
 
 # Here we start looping around all the parameters
 
-#for p in range(parameter_list.index.stop):
-for p in range(0,20):
+for p in range(max(parameter_list.index)):
+#for p in range(0,20):
 
     #"L" is the lines we write to the outputs text file
     today = datetime.datetime.now()
@@ -99,8 +99,6 @@ for p in range(0,20):
 
     else:
         print("unsupported mitigation decision ")
-
-
 
     # read in the decisionmaking file
     decision_file = repo_home / 'data'/'santa_cruz'/'sc_decisions.csv'
@@ -205,7 +203,6 @@ for p in range(0,20):
     # now add these to the city object
     city.set_bins(populations,income,household_sizes,leakages)
 
-
     # define a utility and it's discount rate
     ut = Utility("utility", parameter_list['discount_rate'].iloc[p])
     ut.add_option("res1",50,60,60,1000000)
@@ -238,7 +235,6 @@ for p in range(0,20):
         # read in my baseline inputs for residential and non-residential demands
         this_baseline = baseline_demand['mean'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
         this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
-
         # udpate residential demand if it needs to be based on what 'demand_changes' says
         # the demand changes column will perminantly alter demand to 1-(demandchanges*100) *old demand
         if decisions['demand_changes'].iloc[m]!=0:
@@ -271,6 +267,12 @@ for p in range(0,20):
             additional_monthly_cost = yearly_cost_of_conservation/12
 
             outputs.loc[outputs.index==m,'annualRevenueLost']=yearly_cost_of_conservation
+
+        # adding another option-related thing here in which:
+        # we look at the total demand for the rest of the year
+        # and see how much water we will have available for the rest of the year
+        #
+        # our goal is to issue conservation
 
         if (parameter_list['mitigation_decision'].iloc[p]=="build") and (m ==0):
 

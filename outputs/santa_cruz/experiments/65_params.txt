@@ -1,5 +1,5 @@
 Date: 
-09/07/2021 16:55:40
+13/07/2021 07:44:19
 /n
 ['Decision file: ', PosixPath('/Users/brachuno/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/sc_decisions.csv')]
 ['Scenario: ', 'build']

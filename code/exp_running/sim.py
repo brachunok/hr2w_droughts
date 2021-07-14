@@ -66,8 +66,8 @@ parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parame
 
 # Here we start looping around all the parameters
 
-#for p in range(max(parameter_list.index)):
-for p in range(0,2):
+for p in range(max(parameter_list.index)):
+#for p in range(0,2):
 
     #"L" is the lines we write to the outputs text file
     today = datetime.datetime.now()
@@ -379,7 +379,7 @@ for p in range(0,2):
         this_fee_passthrough = parameter_list['fee_passthrough'].iloc[p]
 
         if update_rates== True:
-            print("adjusting rates!")
+            #print("adjusting rates!")
             if this_fee_passthrough=="zero_threshold" :
                 household_cost = additional_monthly_cost/city.counts.sum()
                 # ^^ this is costs per month/household
@@ -481,7 +481,7 @@ for p in range(0,2):
         class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction))
         hh_demand.loc[m] = class_demands
 
-        print("fixed: ",ut.fixed_charge)
+        #print("fixed: ",ut.fixed_charge)
         # get the bills for each
         class_bills = []
         for c in class_demands:

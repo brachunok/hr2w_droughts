@@ -18,7 +18,7 @@ from pathlib import Path
 from wrtools import *
 
 # CHANGE FOR DIFFERENT MACHINES
-num_cores = 10
+num_cores = 2
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
@@ -69,6 +69,8 @@ repo_home = Path("./").absolute().parents[1]
 #  write a dictionary file with all of the parameters in it
 parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parameter_list.csv")
 
+
+
 # below is our simulation
 def sim_function(p):
     today = datetime.datetime.now()
@@ -98,7 +100,7 @@ def sim_function(p):
         conservation_threshold = 291
 
     elif this_mitigation_decision=="market":
-        market_cost = 7200/3.06 # convert $ /af to $/MG
+        market_cost = 22326.39 # convert $ /af to $/MG
         scenario = "market"
         conservation_threshold = 364
 
@@ -672,4 +674,4 @@ def sim_function(p):
     hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhbstring)
 
 # now multiprocess it
-Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in range(0,5))
+Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in range(0,max(parameter_list.index)+1))

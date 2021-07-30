@@ -115,7 +115,7 @@ for ( i in 1:length(bills)){
     processed[this_row,a_max_perc_cols[j]] <- max(this_bill_i[after_rows_i,j+1])
   }
   
-  if (floor(i/500)==i/500){
+  if (floor(i/50)==i/50){
     print(i/length(bills)*100)
   }
  

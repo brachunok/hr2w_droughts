@@ -192,7 +192,7 @@ df_sources_baseline <- df_sources[c(pre_years,mid_years,post_years),]
 # intense looks like this
 #  2009,10,11,12 --14a,15a,16a --2009,10,11,12
 
-df_sources_intense_output <- rbind(df_sources[c(pre_years),],df_sources_intense[mid_years,],df_sources[post_years,])
+df_sources_intense<- rbind(df_sources[c(pre_years),],df_sources_intense[mid_years,],df_sources[post_years,])
 
 # long looks like this
 #  2009,10,11,12 --14,15,16,14,15,16 --2009
@@ -208,16 +208,22 @@ df_sources_intense$date <- df_sources$date[1:120]
 df_sources_long$date <- df_sources$date[1:120]
 df_sources_long_intense$date <- df_sources$date[1:120]
 
-# write 
+# sanity check to change anything below 0 to 0 because
+# soomehow it's possible for things to get <0 using the above code
+
+df_sources_baseline[df_sources_baseline<0] <- 0
+df_sources_long[df_sources_long<0] <- 0
+df_sources_intense[df_sources_intense<0] <- 0
+df_sources_long_intense[df_sources_long_intense<0] <-0
 
 write.csv(df_sources_baseline,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/baseline.csv")
-write.csv(df_sources_intense_output,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/intense.csv")
+write.csv(df_sources_intense,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/intense.csv")
 write.csv(df_sources_long,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/long.csv")
 write.csv(df_sources_long_intense,file="~/Documents/__college/reseach_stuff/hr2w_droughts/data/santa_cruz/generated_drought_scenarios/long_intense.csv")
 
 
 # make a few plots 
-plot(df_sources_intense_output$taitStreet~df_sources_baseline$date,type="l",col="red")
+plot(df_sources_intense$taitStreet~df_sources_baseline$date,type="l",col="red")
 lines(df_sources_long$taitStreet~df_sources_baseline$date,type="l",col="blue")
 lines(df_sources_baseline$taitStreet~df_sources_baseline$date,type="l",col="black")
 lines(df_sources_long_intense$taitStreet~df_sources_baseline$date,type="l",col="green")

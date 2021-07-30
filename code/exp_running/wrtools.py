@@ -82,8 +82,16 @@ class Reservoir:
     def make_fixed_environmental_release(self,inflows,demands):
        # release the environmental flows and any volume required to keep us from spilling
 
+       # but also make sure we can't take the reservoir volume below 0
+
        release = max(self.env,(self.volume+np.sum(inflows)-np.sum(demands)-self.capacity))
-       self.volume = self.volume + np.sum(inflows)- release - np.sum(demands)
+
+       if (self.volume - release)>0:
+           self.volume = self.volume + np.sum(inflows)- release - np.sum(demands)
+       else:
+           # this is if the release would take us below 0
+           release = self.volume
+           self.volume = 0
 
        return(release)
 

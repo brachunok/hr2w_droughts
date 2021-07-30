@@ -47,7 +47,7 @@ a_max_perc_cols <- which(grepl("A_max_perc",colnames(processed)))
 
 for ( i in 1:length(bills)){
   
-  
+
   # process this specific bills file
   this_bill <- read.csv(bills[i])
   this_demand <- read.csv(usage[i])
@@ -96,6 +96,8 @@ for ( i in 1:length(bills)){
   processed$max_deficit[this_row]  <- max(this_outputs$deficit)
   processed$total_deficit[this_row] <- sum(this_outputs$deficit)
   
+  # also label total utility cost
+  processed$total_utility_cost[this_row] <- sum(this_outputs$monthlyCost)
   
   # so now we have the income dataframe for each
   # find the year with the highest %age for the lowest income class
@@ -120,3 +122,4 @@ for ( i in 1:length(bills)){
 }
 #processed <- processed[complete.cases(processed),]
 save(processed,file = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/processed_bill_data.Rdata")
+ 

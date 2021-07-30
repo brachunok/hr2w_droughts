@@ -10,9 +10,15 @@ import matplotlib.pyplot as plt
 import itertools
 import numpy_financial as npf
 
+import multiprocessing
+from joblib import Parallel, delayed
+
+
 from pathlib import Path
 from wrtools import *
 
+# CHANGE FOR DIFFERENT MACHINES
+num_cores = 10
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
@@ -63,13 +69,8 @@ repo_home = Path("./").absolute().parents[1]
 #  write a dictionary file with all of the parameters in it
 parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parameter_list.csv")
 
-
-# Here we start looping around all the parameters
-
-for p in range(max(parameter_list.index)+1):
-#for p in range(0,1):
-
-    #"L" is the lines we write to the outputs text file
+# below is our simulation
+def sim_function(p):
     today = datetime.datetime.now()
     L = ["Date: ",today.strftime("%d/%m/%Y %H:%M:%S"),"/n"]
     print(p)
@@ -135,7 +136,7 @@ for p in range(max(parameter_list.index)+1):
 
     # get my baseline demand
     baseline_demand = pd.read_csv(repo_home / 'data'/'santa_cruz'/'rcpgd_sc.csv')
-    baseline_demand.columns = ["reporting_month","mean"]ut
+    baseline_demand.columns = ["reporting_month","mean"]
     # units are GPCD`
 
     # scale up seasonality pattern so that residential demand matches
@@ -669,3 +670,6 @@ for p in range(max(parameter_list.index)+1):
     outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ outstring)
     hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhdstring)
     hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhbstring)
+
+# now multiprocess it
+Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in range(0,5))

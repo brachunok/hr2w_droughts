@@ -6,7 +6,6 @@ import datetime
 import math
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import itertools
 import numpy_financial as npf
 

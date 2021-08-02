@@ -21,6 +21,7 @@ num_cores = 2
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
+
 # define all the parameters we want to run in a large dataframe and we will pull from
 # them wherevere we need to in the code in order to run each set
 # note, we have to pad each column with NAs until they are all he same length. Currently 4
@@ -39,6 +40,7 @@ pay_back_period = [30] #[20,30,40]
 discount_rate = [3]#[1.5,3,4.5]
 mitigation_decision = ['baseline','improved','market']
 build_decision = ['none','desal','npr','grrp-r','grrp-l','dpr']
+water_cost = [484*3.06,800*3.06,10000,22326.39]
 
 # define this 'ex[pand-grid' function. Trying to replicaaate expand grid in R
 
@@ -47,9 +49,9 @@ def expandgrid(*itrs):
    return {'Var{}'.format(i+1):[x[i] for x in product] for i in range(len(itrs))}
 
 # give it the lists above and it returns our combos
-parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision)
+parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision,water_cost)
 parameter_list = pd.DataFrame.from_dict(parameter_list)
-parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision']
+parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision','water_cost']
 
 # remove any 'baseline' or 'improved' which isn't 'none'
 
@@ -67,8 +69,6 @@ repo_home = Path("./").absolute().parents[1]
 
 #  write a dictionary file with all of the parameters in it
 parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parameter_list.csv")
-
-
 
 # below is our simulation
 def sim_function(p):
@@ -99,7 +99,7 @@ def sim_function(p):
         conservation_threshold = 291
 
     elif this_mitigation_decision=="market":
-        market_cost = 22326.39 # convert $ /af to $/MG
+        market_cost = parameter_list['water_cost'].iloc[p] # convert $ /af to $/MG
         scenario = "market"
         conservation_threshold = 364
 

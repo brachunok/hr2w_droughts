@@ -35,6 +35,7 @@ a_total_cols <- which(grepl("A_total",colnames(processed)))
 processed$max_deficit <- NA
 processed$total_deficit <- NA
 processed$market_buy <- NA
+processed$total_utility_cost <- NA
 
 # the p columns are agerage %age of income
 processed[,c(paste0("B_avg_perc_",incomes),paste0("A_avg_perc_",incomes))] <- NA
@@ -48,7 +49,6 @@ a_max_perc_cols <- which(grepl("A_max_perc",colnames(processed)))
 
 for ( i in 1:length(bills)){
   
-
   # process this specific bills file
   this_bill <- read.csv(bills[i])
   this_demand <- read.csv(usage[i])
@@ -98,8 +98,8 @@ for ( i in 1:length(bills)){
   processed$total_deficit[this_row] <- sum(this_outputs$deficit)
   
   # also label total utility cost and market buy
-  processed$total_utility_cost[this_row] <- sum(this_outputs$monthlyCost)
-  processed$market_buy[this_row] <- sum(this_outputs$market_buy)
+  processed$total_utility_cost[this_row] <- sum(this_outputs$monthlyCost,na.rm=T)
+  processed$market_buy[this_row] <- sum(this_outputs$market_buy,na.rm=T)
   # so now we have the income dataframe for each
   # find the year with the highest %age for the lowest income class
   max_year <- format(this_bill$date[which(this_bill_i$X7500==max(this_bill_i$X7500))[1]],'%Y')

@@ -160,5 +160,35 @@ p1_utility_individual_cost <- ggplot(outputs_p1,aes(x=total_utility_cost,y=annua
   scale_color_brewer() + facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) +theme_bw()
 p1_utility_individual_cost
 
-# make the same plot as above but base it on %age of income increases
+# now make the same thing but do it for the income-fractional data
+
+outputs_p1_perc_max <- melt(outputs_perc_max,measure.vars = c("deep_poverty_perc_max_avg","poverty_perc_max_avg","near_poverty_perc_max_avg","middle_class_perc_max_avg","upper_class_perc_max_avg"),
+                            variable.name = "income_group",value.name = "max_percentage_bill_change")
+
+outputs_p1_perc_max <- outputs_p1_perc_max[which(outputs_p1_perc_max$reservoir_capacity==2800&outputs_p1_perc_max$income_elasticity==0.1),]
+
+outputs_p1_perc_avg <- melt(outputs_perc_max,measure.vars = c("deep_poverty_perc_max_avg","poverty_perc_max_avg","near_poverty_perc_max_avg","middle_class_perc_max_avg","upper_class_perc_max_avg"),
+                               variable.name = "income_group",value.name = "avg_percentage_bill_change")
+
+outputs_p1_perc_avg  <-outputs_p1_perc_avg[which(outputs_p1_perc_avg$reservoir_capacity==2800&outputs_p1_perc_avg$income_elasticity==0.1),]
+
+p1_another_way <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=max_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+  facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
+
+p1_another_way
+
+p1_another_way_market_buy <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=max_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+  facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
+  
+  
+p1_another_way_avg <- ggplot(outputs_p1_perc_avg,aes(x=(total_utility_cost),y=avg_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+  facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
+p1_another_way_avg
+
+
+# okay so for this weird descending thing in market, we need to compare scenario 359 
+#(highest utility cost among market choices with low-er percentage of water used) against
+# 357 which is a similar all parameters except for a different build decision
+
+
 

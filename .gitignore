@@ -40,3 +40,4 @@ vignettes/*.pdf
 
 # ignore outputs experiments
 /outputs/santa_cruz/experiments/
+/analysis/sc/balance_plots/

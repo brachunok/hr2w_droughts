@@ -127,9 +127,9 @@ library(reshape2)
 library(ggplot2)
 
 # going to melt the responses 
-outputs_totals <- outputs[,c(1:10,43:44,109,158:162)] #these are ad-hoc columns to just get the total bill changes by parameter
-outputs_perc_max <- outputs[,c(1:10,43:44,109,163:167)] 
-outputs_perc_avg <- outputs[,c(1:10,43:44,109,168:172)] 
+outputs_totals <- outputs[,c(1:10,43:46,159:163)] #these are ad-hoc columns to just get the total bill changes by parameter
+outputs_perc_max <- outputs[,c(1:10,43:46,164:168)] 
+outputs_perc_avg <- outputs[,c(1:10,43:46,169:173)] 
 
 outputs_p1<- melt(outputs_totals,measure.vars = c("deep_poverty_total_avg","poverty_total_avg","near_poverty_total_avg","middle_class_total_avg","upper_class_total_avg"),
                      variable.name = "income_group",value.name = "annual_bill_change")
@@ -177,18 +177,10 @@ p1_another_way <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=m
 
 p1_another_way
 
-p1_another_way_market_buy <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=max_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+p1_another_way_market_buy <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=market_buy,color=income_group,group=income_group))+geom_line()+
   facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
-  
-  
-p1_another_way_avg <- ggplot(outputs_p1_perc_avg,aes(x=(total_utility_cost),y=avg_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+p1_another_way_market_buy
+
+p1_another_way_total_cost <- ggplot(outputs_p1,aes(x=(total_utility_cost),y=annual_bill_change,color=income_group,group=income_group))+geom_line()+
   facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
-p1_another_way_avg
-
-
-# okay so for this weird descending thing in market, we need to compare scenario 359 
-#(highest utility cost among market choices with low-er percentage of water used) against
-# 357 which is a similar all parameters except for a different build decision
-
-
-
+p1_another_way_total_cost

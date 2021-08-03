@@ -17,7 +17,7 @@ from pathlib import Path
 from wrtools import *
 
 # CHANGE FOR DIFFERENT MACHINES
-num_cores = 2
+num_cores = 4
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 

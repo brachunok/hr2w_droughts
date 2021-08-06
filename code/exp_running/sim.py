@@ -4,6 +4,7 @@ import os, sys
 
 import datetime
 import math
+import copy
 import pandas as pd
 import numpy as np
 import itertools
@@ -201,10 +202,21 @@ def sim_function(p):
     #populations = np.divide(populations,household_sizes)
 
     income = [7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000]
+    income_names = [str(s) for s in income]
 
     # make the houshold demand dataframe
     hh_demand = pd.DataFrame(columns=income)
-    hh_bills  = pd.DataFrame(columns=income)
+
+    # hh_bills_columns are actual bills income,
+    # the ones with unadjusted anything are raw_income
+    # the ones with adjusted rates but not adjusted demand are rateonly_income
+    # the ones with unadjusted rates but adjusted demand are demandonly_income
+    bills_names = copy.copy(income_names)
+    bills_names.extend([ "raw_" + s for s in income_names])
+    bills_names.extend(["rateonly_" + s for s in income_names])
+    bills_names.extend( ["demandonly_" + s for s in income_names])
+
+    hh_bills  = pd.DataFrame(columns=bills_names)
 
     leakages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
@@ -623,7 +635,25 @@ def sim_function(p):
 
                 outputs.loc[m,'monthlyCost']= outputs.loc[m ,'monthlyCost']+ market_buy*market_cost
 
+        # first write a abseline bill, this is assuming res_reduction = 0 and the bill is normal
+        baseline_class_demands = city.get_total_household_demands(this_baseline)
+        baseline_class_bills = []
+        previous_fixed_charge = ut.fixed_charge
+        ut.set_fixed_charge(base_charge)
 
+        reduced_class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction))
+        reduced_class_normal_bill = []
+        for c in baseline_class_demands:
+            baseline_class_bills.append(ut.get_bill(c/748))
+
+        for c in reduced_class_demands:
+            reduced_class_normal_bill.append(ut.get_bill(c/748))
+
+        # now adjust the fixed charge back and use the non-adjusted demand
+        ut.set_fixed_charge(previous_fixed_charge)
+        baseline_class_adjusted_bill = []
+        for c in baseline_class_demands:
+            baseline_class_adjusted_bill.append(ut.get_bill(c/748))
 
         # write the bills
         #Record demand for an average house from each class
@@ -636,8 +666,14 @@ def sim_function(p):
         class_bills = []
         for c in class_demands:
             class_bills.append(ut.get_bill(c/748))
+            # this is writing the bills for each income class assuming we've made all the changes
 
-        hh_bills.loc[m] = class_bills
+        this_bills = []
+        this_bills.extend(class_bills)
+        this_bills.extend(baseline_class_bills)
+        this_bills.extend(baseline_class_adjusted_bill)
+        this_bills.extend(reduced_class_normal_bill)
+        hh_bills.loc[m] = this_bills
 
         # check to see if we are withdrawing more than the reservoir amount
         # simulate them going into the reservoir
@@ -650,8 +686,6 @@ def sim_function(p):
 
         # record the desal used
         outputs.loc[outputs.index==m,'build_prod'] = build_production
-
-        # calculate and record any deficits
 
         #deficit is deficit if we don't do market water
 

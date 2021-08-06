@@ -8,7 +8,7 @@ load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/processed_bi
 
 # get rid of anyhing without 30 yr pbp and 3% interest
 processed <- processed[which(processed$pay_back_period==30&processed$discount_rate==3),]
-unique_params <- unique(processed[,c(2:8)])
+unique_params <- unique(processed[,c(2:8,11)])
 
 incomes <- c(7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000)
 deep_poverty <- paste0(incomes[1:3]) # 18000
@@ -44,7 +44,7 @@ outputs$upper_class_perc_avg_avg <- NA
 for(i in 1:nrow(unique_params)){
   
   this_param <- unique_params[i,]
-  this_matching <- match_df(x=processed, y=this_param,on=colnames(processed)[c(2:8)])
+  this_matching <- match_df(x=processed, y=this_param,on=colnames(processed)[c(2:8,11)])
   
   # get baseline row
   baseline_row <- which(this_matching$mitigation_decision=="baseline"&this_matching$build_decision=="none")
@@ -127,16 +127,16 @@ library(reshape2)
 library(ggplot2)
 
 # going to melt the responses 
-outputs_totals <- outputs[,c(1:10,43:46,159:163)] #these are ad-hoc columns to just get the total bill changes by parameter
-outputs_perc_max <- outputs[,c(1:10,43:46,164:168)] 
-outputs_perc_avg <- outputs[,c(1:10,43:46,169:173)] 
+outputs_totals <- outputs[,c(1:11,44:47,160:164)] #these are ad-hoc columns to just get the total bill changes by parameter
+outputs_perc_max <- outputs[,c(1:11,44:47,165:169)] 
+outputs_perc_avg <- outputs[,c(1:11,44:47,170:174)] 
 
 outputs_p1<- melt(outputs_totals,measure.vars = c("deep_poverty_total_avg","poverty_total_avg","near_poverty_total_avg","middle_class_total_avg","upper_class_total_avg"),
                      variable.name = "income_group",value.name = "annual_bill_change")
 
 # change reservoir size
 outputs_p1 <- outputs_p1[which(outputs_p1$income_distribution=="state"& outputs_p1$fee_passthrough=="zero_threshold" & outputs_p1$income_elasticity==0.1&
-                                 outputs_p1$pay_back_period==30&outputs_p1$reservoir_capacity==2800),]
+                                 outputs_p1$pay_back_period==30&outputs_p1$reservoir_capacity==2800&outputs_p1$water_cost==22326.39 ),]
 
 # for now just baseline conservation
 #outputs_p1 <-outputs_p1[which(outputs_p1$mitigation_decision=="baseline"),]
@@ -180,7 +180,19 @@ p1_another_way
 p1_another_way_market_buy <- ggplot(outputs_p1_perc_max,aes(x=log1p(total_utility_cost),y=market_buy,color=income_group,group=income_group))+geom_line()+
   facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
 p1_another_way_market_buy
-
-p1_another_way_total_cost <- ggplot(outputs_p1,aes(x=(total_utility_cost),y=annual_bill_change,color=income_group,group=income_group))+geom_line()+
-  facet_grid(rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
+]rows=vars(mitigation_decision),cols=vars(drought_characteristic)) + theme_bw()
 p1_another_way_total_cost
+
+# how does market water change things?
+outputs_perc_avg$equity_diff <- abs(outputs_perc_avg$upper_class_perc_avg_avg - outputs_perc_avg$deep_poverty_perc_avg_avg)
+plot(equity_diff~water_cost,data=outputs_perc_avg)                                      
+
+outputs_perc_avg_melted <- melt(outputs_perc_avg,measure.vars = c("deep_poverty_perc_avg_avg","poverty_perc_avg_avg","near_poverty_perc_avg_avg","middle_class_perc_avg_avg","upper_class_perc_avg_avg"),
+                                variable.name = "income_group",value.name = "avg_percentage_bill_change")
+
+# now plot the perc changes against the cost of water                                      
+
+outputs_perc_avg_melted <- outputs_perc_avg_melted[which(outputs_perc_avg_melted$mitigation_decision=="market"),]
+p1_water_cost <- ggplot(outputs_perc_avg_melted,aes(x=water_cost,y=avg_percentage_bill_change,color=income_group,group=income_group))+geom_line()+
+  facet_grid(rows=vars(build_decision),cols=vars(drought_characteristic))+ theme_bw()
+p1_water_cost

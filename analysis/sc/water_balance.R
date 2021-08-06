@@ -8,11 +8,12 @@ library(cowplot)
 library(readr)
 
 
-path = "~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/experiments"
-write_path = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/balance_plots"
+path = "../../outputs/santa_cruz/experiments"
+write_path = "./balance_plots"
 param_list <- read.csv(paste0(path,"/parameter_list.csv"))
 scenarios <-c(359,357)
-#scenarios <- readr::parse_number(list.files(path,pattern="*output*"))
+#scenarios <- readr::parse_number(list.files(path,pattern="*output*")
+
 # do a for loop here getting the scenarios from scenarios
 for ( i in 1:length(scenarios)){
   

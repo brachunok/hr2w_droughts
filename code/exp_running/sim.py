@@ -687,6 +687,7 @@ def sim_function(p):
         # record the desal used
         outputs.loc[outputs.index==m,'build_prod'] = build_production
 
+        # CTEST COMMENT
         #deficit is deficit if we don't do market water
 
         this_deficit = max(ut.demand-ll_demand-this_ground-surface_inflows.iloc[0]-build_production-market_buy,0)

@@ -567,8 +567,6 @@ def sim_function(p):
         outputs.loc[outputs.index==m,'residentialDemand'] = city.get_utility_demand(this_baseline)/1000000
         outputs.loc[outputs.index==m,'otherDemand'] = this_other
 
-
-
         # for this particular month, here are our inflows
         #this_inflow = inflows['surface'].loc[inflows['date'].eq(this_date)]
         surface_inflows = inflows[['northCoast','taitStreet']].loc[inflows['date'].eq(this_date)].sum(axis=1)
@@ -642,7 +640,7 @@ def sim_function(p):
         previous_fixed_charge = ut.fixed_charge
         ut.set_fixed_charge(base_charge)
 
-        reduced_class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction))
+        reduced_class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction)*(1-percentage_change_quantity))
         reduced_class_normal_bill = []
         for c in baseline_class_demands:
             baseline_class_bills.append(ut.get_bill(c/748))
@@ -659,7 +657,7 @@ def sim_function(p):
         # write the bills
         #Record demand for an average house from each class
         # update demand
-        class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction))
+        class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction)*(1-percentage_change_quantity))
         hh_demand.loc[m] = class_demands
 
         #print("fixed: ",ut.fixed_charge)

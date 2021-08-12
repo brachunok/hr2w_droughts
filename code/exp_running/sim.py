@@ -16,9 +16,9 @@ from joblib import Parallel, delayed
 
 from pathlib import Path
 from wrtools import *
-
+from tqdm import tqdm
 # CHANGE FOR DIFFERENT MACHINES
-num_cores = 4
+num_cores = 2
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
@@ -123,7 +123,7 @@ def sim_function(p):
     #YED = 0.43 # YED and PED from dalhausen 2003, they do a meta-analysis, we use
 
     YED = parameter_list['income_elasticity'].iloc[p]
-    PED= 0.4  # the mean values of their analysis
+    PED = parameter_list['price_elasticity'].iloc[p] # the mean values of their analysis
 
     L.append(["YED: ",YED])
     L.append(["PED: ",PED])
@@ -709,4 +709,4 @@ def sim_function(p):
     hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhbstring)
 
 # now multiprocess it
-Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in range(0,max(parameter_list.index)+1))
+Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in tqdm(range(0,max(parameter_list.index)+1)))

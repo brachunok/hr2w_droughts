@@ -34,14 +34,15 @@ run_parameters['run','drought_characteristics','income_distribution','income_ela
 
 drought_characteristics = ["baseline.csv","long.csv","intense.csv","long_intense.csv"]
 income_distribution = ["state"]#,"low_income","high_income","inequality"]
-income_elasticity= [0.1,.41]#,0.7]
+income_elasticity= [0.1]
 fee_passthrough = ["zero_threshold"]#,"high_threshold","income_threshold"]
-reservoir_capacity = [1400,2800,5600]
+reservoir_capacity = [2800]
 pay_back_period = [30] #[20,30,40]
 discount_rate = [3]#[1.5,3,4.5]
-mitigation_decision = ['baseline','improved','market']
+mitigation_decision = ['baseline','market']
 build_decision = ['none','desal','npr','grrp-r','grrp-l','dpr']
-water_cost = [484*3.06,800*3.06,10000,22326.39]
+water_cost = [22326.39]
+price_elasticity = [0.05,0.1,0.35,0.41,0.5,0.7,0.9,1]
 
 # define this 'ex[pand-grid' function. Trying to replicaaate expand grid in R
 
@@ -50,9 +51,9 @@ def expandgrid(*itrs):
    return {'Var{}'.format(i+1):[x[i] for x in product] for i in range(len(itrs))}
 
 # give it the lists above and it returns our combos
-parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision,water_cost)
+parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision,water_cost,price_elasticity)
 parameter_list = pd.DataFrame.from_dict(parameter_list)
-parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision','water_cost']
+parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision','water_cost','price_elasticity']
 
 # remove any 'baseline' or 'improved' which isn't 'none'
 

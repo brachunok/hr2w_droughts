@@ -23,7 +23,8 @@ load("../processed_and_binned_bill_data.Rdata")
 res_size = 2800
 income_elasticity = 0.1
 water_cost <- 22326.39
-outputs <- outputs[which(outputs$income_elasticity==income_elasticity&outputs$reservoir_capacity==res_size&outputs$water_cost==water_cost),]
+price_elasticity = 0.41
+outputs <- outputs[which(outputs$income_elasticity==income_elasticity&outputs$reservoir_capacity==res_size&outputs$water_cost==water_cost&outputs$price_elasticity==price_elasticity),]
 
 # this is the name of the col(s) we want to make a performance measure of 
 performance_measures <- c("total_utility_cost","poverty_total_avg","upper_class_total_avg","poverty_perc_max_avg","upper_class_perc_max_avg")
@@ -131,8 +132,7 @@ pap_market <- ggparcoord(results_pap,scale="uniminmax",columns=1:15,groupColumn 
 # now make the same thing but for just exp
 exp_cols <- which(grepl("exp",colnames(results)))
 pap_market_exp <- ggparcoord(results_pap,scale="uniminmax",columns=exp_cols,groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_exp
-pap_market_exp_reordered <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,10,13,4,7),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_exp_reordered
-
+pap_market_exp_reordered <- ggparcoord(results_pap,scale="uniminmax",columns=c(10,1,13,4,7),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_exp_reordered
 
 pap_market_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,which(reg_cols)),groupColumn = 16)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_reg
 pap_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,which(reg_cols)),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_reg

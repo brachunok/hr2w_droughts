@@ -20,4 +20,4 @@ For each city, we make a new folder in each of the 5 above just named 'cityname'
 From my experience with this type of work, most re-doing (either in response to reviews, additional work etc...) comes from re-analzying simulation outputs. As such, we want to keep 'outputs' seperate and un-touched so we don't have to rerun all the models, we can just write new code in 'analysis' which makes plots, tables whatever ...
 
 rachunok@stanford.edu 
-03/23/2021
+08/13/21

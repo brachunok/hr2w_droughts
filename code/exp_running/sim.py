@@ -18,7 +18,7 @@ from pathlib import Path
 from wrtools import *
 from tqdm import tqdm
 # CHANGE FOR DIFFERENT MACHINES
-num_cores = 2
+num_cores = 5	
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
@@ -42,7 +42,7 @@ discount_rate = [3]#[1.5,3,4.5]
 mitigation_decision = ['baseline','market']
 build_decision = ['none','desal','npr','grrp-r','grrp-l','dpr']
 water_cost = [22326.39]
-price_elasticity = [0.05,0.1,0.35,0.41,0.5,0.7,0.9,1]
+price_elasticity = [-.3,-.2,-.1,0,0.05,0.1,.2,.3,.4,.5,.6,.7,.8,.9,1,1.1,1.2,1.3,1.4,1.5,1.6]
 
 # define this 'ex[pand-grid' function. Trying to replicaaate expand grid in R
 

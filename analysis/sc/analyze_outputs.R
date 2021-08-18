@@ -40,6 +40,12 @@ outputs$near_poverty_perc_avg_avg <- NA
 outputs$middle_class_perc_avg_avg <- NA
 outputs$upper_class_perc_avg_avg <- NA
 
+outputs$deep_poverty_perc_total <- NA
+outputs$poverty_perc_total <- NA
+outputs$near_poverty_perc_total <- NA
+outputs$middle_class_perc_total<- NA
+outputs$upper_class_perc_total <- NA
+
 
 for(i in 1:nrow(unique_params)){
   
@@ -65,6 +71,7 @@ for(i in 1:nrow(unique_params)){
   perc_avg_after_cols <- grepl("A_avg_perc",colnames(this_matching))
   perc_avg_before_cols <- grepl("B_avg_perc",colnames(this_matching))
   perc_avg_write_cols <- grepl("D_avg_perc",colnames(outputs))
+  
   
   # compute the difference between the after and before columns in matching and 
   # write to the write cols of outputs
@@ -119,6 +126,12 @@ outputs$near_poverty_perc_avg_avg <- rowMeans(outputs[,colnames(outputs)%in%past
 outputs$middle_class_perc_avg_avg<- rowMeans(outputs[,colnames(outputs)%in%paste0("D_avg_perc",middle_class)])
 outputs$upper_class_perc_avg_avg<- rowMeans(outputs[,colnames(outputs)%in%paste0("D_avg_perc",upper_class)])
 
+# compute avg %ages of income
+outputs$deep_poverty_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",deep_poverty)])
+outputs$poverty_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",poverty)])
+outputs$near_poverty_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",near_poverty)])
+outputs$middle_class_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",middle_class)])
+outputs$upper_class_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",upper_class)])
 
 save(outputs,file = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data.Rdata")
 

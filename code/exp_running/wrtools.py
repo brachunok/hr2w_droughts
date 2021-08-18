@@ -390,6 +390,7 @@ class Utility:
 
     # also initialize the pending dataframe
         self.pending = pd.DataFrame(columns=['name','capacity','buildtime','pbp','capex','start','end'])
+        self.baseline_fixed_charge = 0
 
     def add_option(self,name,capacity,buildtime,pbp,capex):
         data = [{'name':name,'capacity':capacity,'buildtime':buildtime,'pbp':pbp,'capex':capex}]
@@ -492,6 +493,9 @@ class Utility:
     def set_fixed_charge(self, fixed_charge):
         self.fixed_charge=fixed_charge
 
+    def set_baseline_fixed_charge(self, baseline_fixed_charge):
+        self.baseline_fixed_charge = baseline_fixed_charge
+
     def set_tier_prices(self,prices):
         self.prices = np.array(prices)
         # volumetric prices for each tier
@@ -518,3 +522,21 @@ class Utility:
 
         return(bill)
 
+    def get_baseline_bill(self,ccf):
+        bill = self.baseline_fixed_charge
+        remaining_volume = ccf
+        t = 0
+        #TODO: reminder if we switch to tiers, we will have to
+        # update this baseline thing
+
+        # while the bill is above 0, we  keep going
+        while remaining_volume>0:
+            this_volume = min(remaining_volume,self.tiers[t])
+            bill = bill + this_volume*self.prices[t]
+            remaining_volume = remaining_volume-this_volume
+            if (t+1)>(len(self.tiers)-1):
+                t = t
+            else:
+                t = t+1
+
+        return(bill)

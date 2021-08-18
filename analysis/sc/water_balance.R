@@ -7,14 +7,13 @@ library(reshape2)
 library(cowplot)
 library(readr)
 
-
 path = "../../outputs/santa_cruz/experiments"
 write_path = "./balance_plots"
 param_list <- read.csv(paste0(path, "/parameter_list.csv"))
 #scenarios <- c(359, 357)
 scenarios <- readr::parse_number(list.files(path,pattern="*output*"))
 
-# do a for loop here getting the scenarios from scenarios
+s# do a for loop here getting the scenarios from scenarios
 for (i in 1:length(scenarios)) {
   outputs <- read.csv(paste0(path, "/", scenarios[i], '_outputs.csv'))
   outputs$Date <- as.Date(outputs$Date)
@@ -174,6 +173,8 @@ for (i in 1:length(scenarios)) {
       these_params$income_elasticity,
       "\n Fee Passthrough: ",
       these_params$fee_passthrough,
+      "\n Price Elasticity: ",
+      these_params$price_elasticity,
       "\n Reservoir Capacity: ",
       these_params$reservoir_capacity,
       " MG",

@@ -23,11 +23,11 @@ load("../processed_and_binned_bill_data.Rdata")
 res_size = 2800
 income_elasticity = 0.1
 water_cost <- 22326.39
-price_elasticity = 0.41
+price_elasticity = 0.4
 outputs <- outputs[which(outputs$income_elasticity==income_elasticity&outputs$reservoir_capacity==res_size&outputs$water_cost==water_cost&outputs$price_elasticity==price_elasticity),]
 
 # this is the name of the col(s) we want to make a performance measure of 
-performance_measures <- c("total_utility_cost","poverty_total_avg","upper_class_total_avg","poverty_perc_max_avg","upper_class_perc_max_avg")
+performance_measures <- c("total_utility_cost","poverty_perc_total","upper_class_perc_total","poverty_perc_max_avg","upper_class_perc_max_avg")
 performance_measures_var_names <- c("tc","pov_total","uc_total","pov_perc","uc_perc")
 p_m_cols <- which(colnames(outputs)%in%performance_measures)
 
@@ -106,8 +106,16 @@ for( i in 1:nrow(outputs_wide)){
 # now that we have results, let's fire up some figures
 # first let's try out a couple of correlation plots 
 
-M <- cor(results)
-corrplot(M,method="circle",col=brewer.pal(n=6, name="PuOr"))
+M_ev <- cor(results[,c(1,4,7,10,13)])
+corrplot(M_ev,method="circle",col=brewer.pal(n=6, name="PuOr"))
+
+M_var <- cor(results[,c(2,5,8,11,14)])
+corrplot(M_var,method="circle",col=brewer.pal(n=6, name="PuOr"))
+
+M_reg <- cor(results[,c(3,6,9,12,15)])
+corrplot(M_reg,method="circle",col=brewer.pal(n=6, name="PuOr"))
+# make one 
+
 
 # make a parallel axis plot 
 library(GGally)

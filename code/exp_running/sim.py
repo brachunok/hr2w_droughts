@@ -18,7 +18,7 @@ from pathlib import Path
 from wrtools import *
 from tqdm import tqdm
 # CHANGE FOR DIFFERENT MACHINES
-num_cores = 5	
+num_cores = 2
 # make our own 'expand grid' function. This is from stack exchange, but apparently it
 # is in the pandas documentation
 
@@ -32,17 +32,17 @@ run_parameters['run','drought_characteristics','income_distribution','income_ela
 #run_parameters.index = run_parameters['run']
 # TODO set up the index
 
-drought_characteristics = ["baseline.csv","long.csv","intense.csv","long_intense.csv"]
+drought_characteristics = ['baseline.csv',"long.csv","intense.csv","long_intense.csv"]
 income_distribution = ["state"]#,"low_income","high_income","inequality"]
 income_elasticity= [0.1]
 fee_passthrough = ["zero_threshold"]#,"high_threshold","income_threshold"]
 reservoir_capacity = [2800]
 pay_back_period = [30] #[20,30,40]
 discount_rate = [3]#[1.5,3,4.5]
-mitigation_decision = ['baseline','market']
+mitigation_decision = ['baseline','market']#'market']
 build_decision = ['none','desal','npr','grrp-r','grrp-l','dpr']
 water_cost = [22326.39]
-price_elasticity = [-.3,-.2,-.1,0,0.05,0.1,.2,.3,.4,.5,.6,.7,.8,.9,1,1.1,1.2,1.3,1.4,1.5,1.6]
+price_elasticity = [-.25,0,.25,.5,.75,1,1.25,1.5,1.75,2,3,4,5,10]
 
 # define this 'ex[pand-grid' function. Trying to replicaaate expand grid in R
 
@@ -232,6 +232,8 @@ def sim_function(p):
     base_charge = 10.99
     ut.set_fixed_charge(base_charge)
 
+    ut.set_baseline_fixed_charge(base_charge)
+
     ut.set_tier_prices([10.03,11.86,13.78,16.74])
     ut.set_tiers([5,2,2,999999])
 
@@ -269,6 +271,7 @@ def sim_function(p):
         #if decisions['demand_changes'].iloc[m]!=0:
         #    print("demand changed to ",(1-decisions['demand_changes'].iloc[m]))
         #    baseline_demand['mean'] = baseline_demand['mean']*(1-decisions['demand_changes'].iloc[m])
+
 
 
         # adding another option-related thing here in which:
@@ -533,24 +536,40 @@ def sim_function(p):
 
         update_rates = False
 
-        if outputs['fixedCharge'].iloc[m] > outputs['fixedCharge'].iloc[m-1] and m> 0:
-            print("inpedloop")
-            # we only do this when the charge goes up, not when it goes     down,
-            # because that amount is incorperated into the rebound which is calculated
-            # seperately
-            # this means we updated the fixed charge above
-            # so we have to update the demand based on that
-            fixed_charge_difference = outputs['fixedCharge'].iloc[m] - outputs['fixedCharge'].iloc[m-1]
-            #print("fixed charge diff: ",fixed_charge_difference)
-            ped_class_demands = city.get_total_household_demands(this_baseline)
-            mean_demand = ped_class_demands.mean()
-            #print("mean demand: ",mean_demand)
-            percentage_change_price = fixed_charge_difference/ut.get_bill(mean_demand/748)
-            #print("bill is: $",ut.get_bill(mean_demand/748))
-            percentage_change_quantity = PED*percentage_change_price
-        else:
-            percentage_change_quantity=0
-            #print("%age change quantity: ",percentage_change_quantity)
+        # if outputs['fixedCharge'].iloc[m] > outputs['fixedCharge'].iloc[m-1] and m> 0:
+        #     print("inpedloop")
+        #     # we only do this when the charge goes up, not when it goes     down,
+        #     # because that amount is incorperated into the rebound which is calculated
+        #     # seperately
+        #     # this means we updated the fixed charge above
+        #     # so we have to update the demand based on that
+        #     fixed_charge_difference = outputs['fixedCharge'].iloc[m] - outputs['fixedCharge'].iloc[m-1]
+        #     #print("fixed charge diff: ",fixed_charge_difference)
+        #     ped_class_demands = city.get_total_household_demands(this_baseline)
+        #     mean_demand = ped_class_demands.mean()
+        #     #print("mean demand: ",mean_demand)
+        #     percentage_change_price = fixed_charge_difference/ut.get_bill(mean_demand/748)
+        #     #print("bill is: $",ut.get_bill(mean_demand/748))
+        #     percentage_change_quantity = PED*percentage_change_price
+        # else:
+        #     percentage_change_quantity=0
+        #     #print("%age change quantity: ",percentage_change_quantity)
+
+        # trying a new mechanism for PED:
+        # here, we will compute eveyrhting compared to the basline bill for the
+        # given month. The result is that percentage_change_quantity gets updated
+        # every time.
+
+        # first compute baseline price
+        ped_class_demands = city.get_total_household_demands(this_baseline)
+        mean_demand = ped_class_demands.mean()
+
+        bill_difference = ut.get_bill(mean_demand/748)-ut.get_baseline_bill(mean_demand/748)
+
+        percentage_change_price = bill_difference/ut.get_baseline_bill(mean_demand/748)
+        print("perc change price: ",percentage_change_price)
+        percentage_change_quantity = PED*percentage_change_price
+
 
         # now make adjustments based on conservation, and price changes
         adjusted_baseline = this_baseline*(1-res_reduction)*(1-percentage_change_quantity)

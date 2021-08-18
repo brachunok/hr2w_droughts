@@ -20,7 +20,7 @@ tc_PED_plot
 
 # 
 tc_PED_plot <- ggplot()+ geom_line(data=outputs[which(outputs$total_utility_cost<=50000000),],aes(x=price_elasticity,y=total_utility_cost,color=combined_decision))+theme_bw()+
-  facet_grid(rows=vars(drought_characteristic))
+  facet_grid(rows=vars(drought_characteristic),scale="free")
 tc_PED_plot
 
 # same thing for other performance metrics 
@@ -29,10 +29,18 @@ tc_PED_plot
 end_points <- outputs[which(outputs$price_elasticity==1),c("combined_decision","poverty_total_avg")]
 
 li_total_PED_plot <- ggplot()+ geom_line(data=outputs,aes(x=price_elasticity,y=poverty_total_avg,color=combined_decision))+theme_bw()+
-  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41) + 
-  
-  
-LOOK AT TEH SWAP POINTS for just a few and see how it changes with drought intensity vs serverity 
+  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41)  
+li_total_PED_plot  
 
-  
-li_total_PED_plot
+
+hi_total_PED_plot <- ggplot()+ geom_line(data=outputs[outputs$mitigation_decision=="baseline",],aes(x=price_elasticity,y=upper_class_total_avg,color=combined_decision))+theme_bw()+
+  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41)  
+hi_total_PED_plot  
+
+
+# pull out the ones that only change in long-intense 
+
+li_total_PED_plot <- ggplot()+ geom_line(data=outputs[outputs$mitigation_decision=="baseline",],aes(x=price_elasticity,y=poverty_perc_max_avg,color=combined_decision))+theme_bw()+
+  facet_grid(rows=vars(drought_characteristic),scales = "free") + geom_vline(xintercept=0.41)  
+li_total_PED_plot  
+

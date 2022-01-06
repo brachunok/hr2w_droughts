@@ -2,7 +2,7 @@
 library(tidyr)
 
 # read the experiment output files, and make a dataframe containing the parameters and all the values about the run
-path = "../../outputs/santa_cruz/experiments"
+path = "../../outputs/santa_cruz/experiments/plot8/"
 
 before_year= 2010
 after_year = 2015
@@ -122,5 +122,5 @@ for ( i in 1:length(bills)){
  
 }
 #processed <- processed[complete.cases(processed),]
-save(processed,file = "../../analysis/sc/processed_bill_data.Rdata")
+save(processed,file = "../../analysis/sc/processed_bill_data_plot8.Rdata")
  

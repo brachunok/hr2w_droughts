@@ -28,19 +28,14 @@ tc_PED_plot
 # get the ending label point: e.g. whatever the performance metric is when PED = 1 
 end_points <- outputs[which(outputs$price_elasticity==1),c("combined_decision","poverty_total_avg")]
 
-li_total_PED_plot <- ggplot()+ geom_line(data=outputs,aes(x=price_elasticity,y=poverty_total_avg,color=combined_decision))+theme_bw()+
-  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41)  
+li_total_PED_plot <- ggplot()+ geom_line(data=outputs,aes(x=price_elasticity,y=poverty_perc_total,color=combined_decision))+theme_bw()+
+  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41) +xlim(-1,1)
 li_total_PED_plot  
 
-
-hi_total_PED_plot <- ggplot()+ geom_line(data=outputs[outputs$mitigation_decision=="baseline",],aes(x=price_elasticity,y=upper_class_total_avg,color=combined_decision))+theme_bw()+
-  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41)  
+hi_total_PED_plot <- ggplot()+ geom_line(data=outputs,aes(x=price_elasticity,y=upper_class_perc_total,color=combined_decision))+theme_bw()+
+  facet_grid(rows=vars(drought_characteristic)) + geom_vline(xintercept=0.41) +xlim(-1,1)
 hi_total_PED_plot  
 
 
-# pull out the ones that only change in long-intense 
-
-li_total_PED_plot <- ggplot()+ geom_line(data=outputs[outputs$mitigation_decision=="baseline",],aes(x=price_elasticity,y=poverty_perc_max_avg,color=combined_decision))+theme_bw()+
-  facet_grid(rows=vars(drought_characteristic),scales = "free") + geom_vline(xintercept=0.41)  
-li_total_PED_plot  
-
+#FIGURE OUT WHY THE NPR BASELINE doesnt change in the baseline/intense cases. You've run the balance plot runner
+#on the cluster, you just need to bring th plots back'

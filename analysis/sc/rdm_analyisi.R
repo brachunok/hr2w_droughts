@@ -23,7 +23,7 @@ load("../processed_and_binned_bill_data.Rdata")
 res_size = 2800
 income_elasticity = 0.1
 water_cost <- 22326.39
-price_elasticity = 0.4
+price_elasticity = 0.5
 outputs <- outputs[which(outputs$income_elasticity==income_elasticity&outputs$reservoir_capacity==res_size&outputs$water_cost==water_cost&outputs$price_elasticity==price_elasticity),]
 
 # this is the name of the col(s) we want to make a performance measure of 
@@ -66,33 +66,33 @@ pov_perc_cols <-  which(grepl("pov_perc",colnames(outputs_wide)))
 uc_perc_cols <-   which(grepl("uc_perc",colnames(outputs_wide)))
 
 results$tc_exp <- rowMeans(outputs_wide[,tc_cols])
-results$tc_var <- NA
+results$tc_range <- NA
 results$tc_reg <- NA
 
 results$pov_total_exp <- rowMeans(outputs_wide[,pov_total_cols])
-results$pov_total_var <- NA
+results$pov_total_range <- NA
 results$pov_total_reg <- NA
 
 results$uc_total_exp <- rowMeans(outputs_wide[,uc_total_cols])
-results$uc_total_var <- NA
+results$uc_total_range <- NA
 results$uc_total_reg <- NA
 
 results$pov_perc_exp <- rowMeans(outputs_wide[,pov_perc_cols])
-results$pov_perc_var <- NA
+results$pov_perc_range <- NA
 results$pov_perc_reg <- NA
 
 results$uc_perc_exp <- rowMeans(outputs_wide[,uc_perc_cols])
-results$uc_perc_var <- NA
+results$uc_perc_range <- NA
 results$uc_perc_reg <- NA
 
 # loop through rows and calculate the variance and regret 
 for( i in 1:nrow(outputs_wide)){
   
-  results$tc_var[i] <- var(unlist(outputs_wide[i,tc_cols]))
-  results$pov_total_var[i] <- var(unlist(outputs_wide[i,pov_total_cols]))
-  results$uc_total_var[i] <- var(unlist(outputs_wide[i,uc_total_cols]))
-  results$pov_perc_var[i] <- var(unlist(outputs_wide[i,pov_perc_cols]))
-  results$uc_perc_var[i] <- var(unlist(outputs_wide[i,uc_perc_cols]))
+  results$tc_range[i] <- max(unlist(outputs_wide[i,tc_cols]))-min(unlist(outputs_wide[i,tc_cols]))
+  results$pov_total_range[i] <- max(unlist(outputs_wide[i,pov_total_cols]))-min(unlist(outputs_wide[i,pov_total_cols]))
+  results$uc_total_range[i] <- max(unlist(outputs_wide[i,uc_total_cols]))-min(unlist(outputs_wide[i,uc_total_cols]))
+  results$pov_perc_range[i] <- max(unlist(outputs_wide[i,pov_perc_cols]))-min(unlist(outputs_wide[i,pov_perc_cols]))
+  results$uc_perc_range[i] <- max(unlist(outputs_wide[i,uc_perc_cols])) - min(unlist(outputs_wide[i,uc_perc_cols]))
   
   
   results$tc_reg[i] <- min(outputs_wide[i,tc_cols])-max(outputs_wide[i,tc_cols])
@@ -139,14 +139,21 @@ pap_market <- ggparcoord(results_pap,scale="uniminmax",columns=1:15,groupColumn 
 
 # now make the same thing but for just exp
 exp_cols <- which(grepl("exp",colnames(results)))
+range_cols <- which(grepl("range",colnames(results)))
+
 pap_market_exp <- ggparcoord(results_pap,scale="uniminmax",columns=exp_cols,groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_exp
 pap_market_exp_reordered <- ggparcoord(results_pap,scale="uniminmax",columns=c(10,1,13,4,7),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_exp_reordered
 
-pap_market_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,which(reg_cols)),groupColumn = 16)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_reg
-pap_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,which(reg_cols)),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_reg
+
+pap_market_range <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,2,5,11,8,14),groupColumn = 17)+
+  theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_range
+
+
+pap_market_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(1,3,6,12,9,15),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_market_reg
+pap_reg <- ggparcoord(results_pap,scale="uniminmax",columns=c(3,which(reg_cols)),groupColumn = 17)+theme_ipsum()+ scale_color_viridis(discrete=TRUE);pap_reg
 
 # leaderboard for each,--> being cheap and doing this in excel
-write.csv("~/Downloads/results.csv",x = results)
+#write.csv("~/Downloads/results.csv",x = results)
 
 # color leaderboard by market/baseline
 

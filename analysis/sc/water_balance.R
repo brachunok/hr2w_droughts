@@ -7,8 +7,9 @@ library(reshape2)
 library(cowplot)
 library(readr)
 
-path = "../../outputs/santa_cruz/experiments"
-write_path = "./balance_plots"
+
+path = "../../outputs/santa_cruz/experiments/SI_rate_change/"
+write_path = "./balance_plots/SI_rate_change"
 param_list <- read.csv(paste0(path, "/parameter_list.csv"))
 #scenarios <- c(359, 357)
 scenarios <- readr::parse_number(list.files(path,pattern="*output*"))

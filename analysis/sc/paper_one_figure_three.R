@@ -176,9 +176,9 @@ library(cowplot)
 legends <- plot_grid(p1_leg,p2_2_leg,nrow=1,rel_heights = c(1,2))
 p_right <- plot_grid(p2_2_no_leg,legends,nrow=2,rel_heights=c(2,1))
 p_final <- plot_grid(p1_no_leg,p_right,rel_widths = c(1,1.5),rel_heights = c(1.5,1))
-ggsave(p_final,filename = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/draft_figure_3.pdf",width=5,height=4,unit="in")
+#ggsave(p_final,filename = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/draft_figure_3.pdf",width=5,height=4,unit="in")
 
 # figure for presentation
 p2_2 <- p2_2+ggtitle("Total Bill Increase for High and Low-income Households, Price Elasticity 0.1 vs 0.8")
-ggsave(p2_2,filename = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/draft_figure_3_DMDU_pres.pdf",width=7,height=4,unit="in")
+#ggsave(p2_2,filename = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/draft_figure_3_DMDU_pres.pdf",width=7,height=4,unit="in")
 

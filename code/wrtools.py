@@ -2,37 +2,46 @@ import numpy as np
 import pandas as pd
 
 class City:
-    def __init__(self, demand,income_elasticity,MHI):
-        self.demand = demand # current demand for the city
-        #self.inflow = inflow # current inflow
+    def __init__(self, income_elasticity,MHI,cross_price_income,cpi_2):
+
         self.income_elasticity = income_elasticity
+        self.cross_price_income = cross_price_income
+        self.cpi_2 = cpi_2
         self.MHI = MHI
 
     def set_restriction(self,restriction):
         self.restriction = restriction
 
-    def set_bins(self, counts,incomes,household_sizes,leaks):
+    def set_bins(self, counts,incomes,household_sizes,leaks,PED):
         # counts are the number of each class, income are the incomes
         # of each class
         self.counts = counts # number of each household
         self.income = incomes
         self.household_sizes = household_sizes
         self.i_bar = self.MHI
-        self.income_percentages = np.divide(self.income-self.i_bar,self.i_bar)
+        self.income_percentages = np.divide([x  - self.i_bar for x in self.income],self.i_bar)
+
         # ^^ percentage change from MHI
         self.leakage_volumes = leaks
 
-    def set_dummy_demands(self,demands):
-        self.demands = demands
-        # IN THE FUTURE, this will be
+        # update income_percentages with the cross prices
+        income_in_t_thousands = [x/10000 for x in self.income]
+        term_1 = [self.cross_price_income*x for x in income_in_t_thousands]
+        term_2 = [self.cpi_2*x**2 for x in income_in_t_thousands]
+        sum_of_t1_t2 = np.add(term_1 ,term_2)
+        income_based_ped = [x + PED for x in sum_of_t1_t2]
+        self.income_based_ped = [max(x,0) for x in income_based_ped]
+        # THE PED VALUE HAS TO BE POSITIVE AS A PARAMETER FOR THIS TO WORK
 
-    def set_demands(self,demands):
-       # in the future, this will take in
-       # the current billing structure and the price
-       # elasticity of water deman
-       self.demands = demands
+
+    def set_baseline_demand(self,file):
+        # this is the RGPCD values which we use
+        # to calculate everything else from
+        self.baseline_demand = pd.read_csv(file)
+
 
     def get_class_demands(self, monthly_baseline):
+
 
         # baseline that comes in is average R-GPCD
 
@@ -42,26 +51,71 @@ class City:
         baseline_adjusted = monthly_baseline + monthly_baseline*self.income_percentages*self.income_elasticity
 
         d = 30.4*baseline_adjusted
+
+
+
         return(d)
         # this is the monthly demand for one person from each class in GALLONS
 
-    def get_total_household_demands(self,baseline):
+    def get_total_household_demands(self,baseline,utility ):
+
+        # so this is going to get utility, calculate all the changes based on
+        #the original and adjusted bill and multiply them
+        # by the income elasticities. The result will be
+        # this means I don't have to do any PED stuff outside the loop
+
+
 
         c = self.get_class_demands(baseline) + self.leakage_volumes
-        return(np.multiply(c,self.household_sizes))
+        c = np.multiply(c,self.household_sizes)
+
+        baseline_bills = [utility.get_baseline_bill(x/748) for x in c]
+        adjusted_bills = [utility.get_bill(x/748) for x in c]
+
+        percentage_changes_income = np.divide(adjusted_bills,baseline_bills)-1
+
+        percentage_changes_quantity = np.multiply(percentage_changes_income,self.income_based_ped)
+
+        quantity_change = np.multiply(c,percentage_changes_quantity)
+
+        #now
+        household_demand = c - quantity_change
+
+        return(household_demand)
         # this is the monthly household demand for one household from
         # each class
 
-    def get_total_demand_by_class(self,baseline):
-        d = self.get_total_household_demands(baseline)
+    def get_total_demand_by_class(self,baseline,utility):
+        d = self.get_total_household_demands(baseline,utility)
         return(np.multiply(d,self.counts))
         # this is the total monthly demand broken down by class
 
-    def get_utility_demand(self,baseline):
-        d = self.get_total_demand_by_class(baseline)
+    def get_utility_demand(self,baseline,utility):
+        d = self.get_total_demand_by_class(baseline,utility)
 
         return(sum(d))
     # this is a monthyly demand in gallons for everyone
+
+    def get_total_household_demands_no_ped(self,baseline):
+
+
+        c = self.get_class_demands(baseline) + self.leakage_volumes
+        c = np.multiply(c,self.household_sizes)
+
+        return(c)
+        # this is the monthly household demand for one household from
+        # each class
+
+    def get_total_demand_by_class_no_ped(self,baseline):
+        d = self.get_total_household_demands_no_ped(baseline)
+        return(np.multiply(d,self.counts))
+        # this is the total monthly demand broken down by class
+
+    def get_utility_demand_no_ped(self,baseline):
+        d = self.get_total_demand_by_class_no_ped(baseline)
+
+        return(sum(d))
+
 
 class Reservoir:
     def __init__(self, capacity,env_release):
@@ -241,153 +295,35 @@ class Reservoir:
             excess = excess
         return(excess)
 
-class AllocatedReservoir(Reservoir):
-    def __init__(self,capacity,allocations):
-        super().__init__(capacity)
-        self.allocations = allocations
-
-    # allocated reservoir is a subclass of reservoir
-    # which makes decisiosn and checks decisions based on the allocations.
-    # allocations are going to be an array
-    # each entry is the amount the ith demand has access to
-    # the order needs to be the same throughout.
-    # e.g. [.1,.9.] or [.1,.1,.8]. The array needs to sum to 1
-
-
-    def make_sop(self, inflows, demands):
-        # inflows are arrays of each inflow
-        # demands are arrays of each demand.
-        # release is split up in the same order as the demand
-        # what we do here, is the ``standard operating policy``
-        # here page 10: https://apps.dtic.mil/dtic/tr/fulltext/u2/a315845.pdf
-        # if my storage + my sum of inflows < sum of demands
-        #      then I release storage + inflows
-        # elif my storage + my sum of inflows < capacity + demand
-        #      then release = demand
-        # else
-        #      release = volume now + inflows - capacity. AKA release to get down to capacity
-        #
-        # storage gets updated to storage now - release
-        # then release gets divided up proportionally based on the demands
-
-        # sum up all my inflows and demands
-        inflow = np.sum(inflows)
-        demand = np.sum(demands)
-        release = 0
-
-        # now do the rules
-        if (self.volume + inflow) < (demand):
-            release = self.volume + inflow
-
-        elif (self.volume + inflow) < (self.capacity + demand):
-            release = demand
-
-        else:
-            release = self.volume + inflow - self.capacity
-
-        # update volume based on total released
-        self.volume = self.volume - release + inflow
-
-        # if we have multiple demands, allocate the release proportionally
-        # to what they asked for
-        if (demand>0):
-            release_values = release * (demands/demand)
-        else:
-            release_values = release
-
-        return(release_values)
-
-    def check_sop(self, inflows, demands):
-        # this is the same as the above method
-        # except this one doesn't change anything, it only
-        # sees how much is available
-        #
-        # sum up all my inflows and demands
-        inflow = np.sum(inflows)
-        demand = np.sum(demands)
-        release = 0
-
-        # now do the rules
-        if (self.volume + inflow) < (demand):
-            release = self.volume + inflow
-
-        elif (self.volume + inflow) < (self.capacity + demand):
-            release = demand
-
-        else:
-            release = self.volume + inflow - self.capacity
-
-        # if we have multiple demands, allocate the release proportionally
-        # to what they asked for
-        release_values = release * (demands/demand)
-        return(release_values)
-
-    def check_excess(self, inflows, demands):
-        # this is the same as the above method
-        # except this one doesn't change anything, and
-        # sees how much is left after we did a hypothetical release
-        #
-        # sum up all my inflows and demands
-        inflow = np.sum(inflows)
-        demand = np.sum(demands)
-        release = 0
-        excess = 0
-        # now do the rules
-        if (self.volume + inflow) < (demand):
-            # this is where we go if we don't have enough coming in
-            # and on hand to deal with demand
-            release = self.volume + inflow
-            excess = 0
-
-        elif (self.volume + inflow) < (self.capacity + demand):
-            # this is the 'we just have enough on hand but aren't'
-            # overflowing. part of code
-            release = demand
-            excess = self.volume + inflow - demand
-
-        else:
-            # this is the 'we have way too much for the given amount of'
-            #
-            release = self.volume + inflow - self.capacity
-
-            # in this case, the excess (I think) is just how much is available
-            # minus the demand
-            excess = self.volume + inflow - demand
-        # if we have multiple demands, allocate the release proportionally
-        # to what they asked for
-        if (demand>0):
-            excess = excess * (demands/demand)
-        else:
-            excess = excess
-        return(excess)
 
 class Inflow:
-    def __init__(self, flow):
-        self.flow = flow
+    def __init__(self, file):
+        # read the file, store it as a dataframe
+        self.flow = pd.read_csv(file)
+
+    def get_n_flow(self,n,d):
+        # return the nth flow for the dth drought
+        # reminder, both of these are 0 indexed internally
+        # so for ease of use,
+        # we subtract 1 from n so we get the 'actual' things we need.
+        #e.g. value of 1 gets you the first row
+        # and d works out that way anyways for
+        val = self.flow.iat[n-1,d]
+        return(val)
+
+    def get_date_flow(self,date,d):
+        # get the flow by date
+        print("date")
 
 class GroundWater:
     def __init__(self,flow):
         self.flow = flow
 
 class Utility:
-    def __init__(self, name,irr):
-        self.name = name
+    def __init__(self, irr):
+
         self.irr = irr
-        self.monthly_liability =0
 
-    # also initialize the optins dataframe
-        self.options = pd.DataFrame(columns=['name','capacity','buildtime','pbp','capex'] )
-        # if i change the above, it also has to be changed in the add_options method
-
-    # also initialize the pending dataframe
-        self.pending = pd.DataFrame(columns=['name','capacity','buildtime','pbp','capex','start','end'])
-
-    def add_option(self,name,capacity,buildtime,pbp,capex):
-        data = [{'name':name,'capacity':capacity,'buildtime':buildtime,'pbp':pbp,'capex':capex}]
-        new_df = pd.DataFrame(data)
-        self.options = self.options.append(new_df,sort = False)
-        self.monthly_costs = self.calculate_monthly_cost()
-        self.options = self.options.reset_index(drop=True)
 
     def choose_option(self,i,time):
         # build option takes the ith element of the options and moves it to
@@ -457,8 +393,8 @@ class Utility:
             monthly_baseline = baseline['mean'].iloc[h]
             monthly_adjusted = baseline['adjusted'].iloc[h]
 
-            current_use = city.get_total_household_demands(monthly_baseline)/748
-            adjusted_use = city.get_total_household_demands(monthly_adjusted)/748
+            current_use = city.get_total_household_demands(monthly_baseline,self)/748
+            adjusted_use = city.get_total_household_demands(monthly_adjusted,self)/748
 
             current_revenue = list()
             adjusted_revenue = list()
@@ -483,6 +419,9 @@ class Utility:
     def set_fixed_charge(self, fixed_charge):
         self.fixed_charge=fixed_charge
 
+    def set_baseline_fixed_charge(self, baseline_fixed_charge):
+        self.baseline_fixed_charge = baseline_fixed_charge
+
     def set_tier_prices(self,prices):
         self.prices = np.array(prices)
         # volumetric prices for each tier
@@ -490,6 +429,10 @@ class Utility:
     def set_tiers(self,tiers):
         self.tiers = np.array(tiers)
         # the cutoffs for each tier, 0 is included. These are the upper cutoffs
+
+    def set_baseline_tiers_and_prices(self,tiers,prices):
+        self.baseline_tiers = np.array(tiers)
+        self.baseline_prices = np.array(prices)
 
     def get_bill(self,ccf):
 
@@ -508,4 +451,84 @@ class Utility:
                 t = t+1
 
         return(bill)
+
+    def get_baseline_bill(self,ccf):
+        bill = self.baseline_fixed_charge
+        remaining_volume = ccf
+        t = 0
+        #TODO: reminder if we switch to tiers, we will have to
+        # update this baseline thing
+
+        # while the bill is above 0, we  keep going
+        while remaining_volume>0:
+            this_volume = min(remaining_volume,self.baseline_tiers[t])
+            bill = bill + this_volume*self.baseline_prices[t]
+            remaining_volume = remaining_volume-this_volume
+            if (t+1)>(len(self.baseline_tiers)-1):
+                t = t
+            else:
+                t = t+1
+
+        return(bill)
+
+    def calculate_hh_bills(self,this_baseline,res_reduction,percentage_change_quantity,city):
+
+        # this is going to be for a specific month, we calculate 4 types of bills
+        # normal | raw| rate only | demand only
+
+        # do this for each class ofhousehold
+        this_adjusted = this_baseline*(1-res_reduction)
+
+        current_use = city.get_total_household_demands(this_baseline,self)/748
+        adjusted_use = city.get_total_household_demands(this_adjusted,self)/748
+
+        current_bills = list()
+        raw_bills = list()
+        rate_only_bills = list()
+        demand_only_bills = list()
+
+        for p in range(len(current_use)):
+            this_current = current_use[p]
+            this_adjusted = adjusted_use[p]
+
+
+            current_bills.append(self.get_bill(this_adjusted))
+            raw_bills.append(self.get_baseline_bill(this_current))
+            rate_only_bills.append(self.get_bill(this_current))
+            demand_only_bills.append(self.get_baseline_bill(this_adjusted))
+
+
+
+        return(current_bills+raw_bills+rate_only_bills+demand_only_bills)
+
+    def calculate_hh_demand(self,this_baseline,res_reduction,percentage_change_quantity,city):
+        # this_baseline,res_reduction,percentage_change_quantity,city
+        # this is going to be for a specific month, we calculate 4 types of bills
+        # normal | raw| rate only | demand only
+
+        # do this for each class ofhousehold
+        this_adjusted = this_baseline*(1-res_reduction)
+
+        current_use = city.get_total_household_demands(this_baseline,self)/748
+        adjusted_use = city.get_total_household_demands(this_adjusted,self)/748
+
+        current_demand = list()
+        raw_demand = list()
+
+
+        for p in range(len(current_use)):
+            this_current = current_use[p]
+            this_adjusted = adjusted_use[p]
+
+
+            current_demand.append(this_adjusted)
+            raw_demand.append(this_current)
+
+
+
+        return(current_demand  + raw_demand)
+
+
+
+
 

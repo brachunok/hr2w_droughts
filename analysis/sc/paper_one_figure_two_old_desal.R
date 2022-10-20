@@ -7,7 +7,7 @@ library(ggrepel)
 library('ggpattern')
 
 options(scipen=999)
-load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data_plot8.Rdata")
+load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data_plot9.Rdata")
 og_outputs <- outputs
 elasticities_values <- unique(outputs$price_elasticity)
 

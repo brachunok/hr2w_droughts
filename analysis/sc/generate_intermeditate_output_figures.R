@@ -27,7 +27,7 @@ library('cowplot')
 # (3) rate increase from infra
 # (4) rate increase due to surcharge 
 
-path = "~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/experiments/plot8"
+path = "~/Documents/__college/reseach_stuff/hr2w_droughts/outputs/santa_cruz/experiments/plot10"
 params <- read.csv(paste0(path,"/parameter_list.csv"))
 
 bills_list = list.files(path = path,pattern = "*bills*",full.names = T)
@@ -109,7 +109,7 @@ for(i in 1:nrow(params)){
       y = .02,
       x = .98
     )
-  filename <- paste0(path,"/figures/billl_parts_",i,".pdf")
+  filename <- paste0(path,"/figures/billl_parts_",numbers[i],".pdf")
   ggsave(p_final,filename=filename,width=10,height=6,unit="in")
   
   # now the next figure....
@@ -157,7 +157,7 @@ for(i in 1:nrow(params)){
     y = .02,
     x = .98
   )    
-  demand_filename <- paste0(path,"/figures/demand_parts_",i,".pdf")
+  demand_filename <- paste0(path,"/figures/demand_parts_",numbers[i],".pdf")
   ggsave(demand_final,filename=demand_filename,width=10,height=6,unit="in")
   
   
@@ -182,7 +182,7 @@ for(i in 1:nrow(params)){
     y = .02,
     x = .98
   )    
-  avail_filename <- paste0(path,"/figures/water_avail_",i,".pdf")
+  avail_filename <- paste0(path,"/figures/water_avail_",numbers[i],".pdf")
   ggsave(water_avail,filename=avail_filename,width=10,height=6,unit="in")
   
   # now a deficit and actions figure
@@ -196,7 +196,7 @@ for(i in 1:nrow(params)){
   deficit_actions <- ggplot() + geom_line(data=deficit_melt,aes(x=Date,y=value,color=variable))+theme_bw()+scale_color_npg()+
     labs(x="Date",y="MG/Month",title="Deficit volume and mitigation actions")
     
-  deficit_filename <- paste0(path,"/figures/deficit_",i,".pdf")
+  deficit_filename <- paste0(path,"/figures/deficit_",numbers[i],".pdf")
   ggsave(deficit_actions,filename=deficit_filename,width=10,height=6,unit="in")
   
 }

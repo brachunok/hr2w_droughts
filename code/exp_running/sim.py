@@ -19,30 +19,25 @@ from wrtools import *
 from tqdm import tqdm
 # CHANGE FOR DIFFERENT MACHINES
 num_cores = 2
-# make our own 'expand grid' function. This is from stack exchange, but apparently it
-# is in the pandas documentation
 
 
-# define all the parameters we want to run in a large dataframe and we will pull from
-# them wherevere we need to in the code in order to run each set
-# note, we have to pad each column with NAs until they are all he same length. Currently 4
 
-run_parameters = pd.DataFrame()
-run_parameters['run','drought_characteristics','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision'] = []
-#run_parameters.index = run_parameters['run']
-# TODO set up the index
-
-drought_characteristics = ['baseline.csv',"long.csv","intense.csv","long_intense.csv"]
+drought_characteristics = ['baseline.csv',"long_intense.csv","long.csv","intense.csv"]
 income_distribution = ["state"]#,"low_income","high_income","inequality"]
-income_elasticity= [0.1]
-fee_passthrough = ["zero_threshold"]#,"high_threshold","income_threshold"]
+income_elasticity= [0.15]
+fee_passthrough = ["zero_threshold"]#,"one_tier","multi_tier"]
 reservoir_capacity = [2800]
 pay_back_period = [30] #[20,30,40]
 discount_rate = [3]#[1.5,3,4.5]
-mitigation_decision = ['baseline','market']#'market']
-build_decision = ['none','desal','npr','grrp-r','grrp-l','dpr']
+mitigation_decision = ['baseline','market']
+build_decision = ['none','desal','grrp-r']# 'npr','grrp-r','grrp-l','dpr']
 water_cost = [22326.39]
-price_elasticity = [-.25,0,.25,.5,.75,1,1.25,1.5,1.75,2,3,4,5,10]
+cross_price = [0.013,-0.013]
+cpe_squared = [0.00]
+price_elasticity = [0,0.325]#,0.4,0.8]#,0.8] #[-.25,0,.25,.5,.75,1,1.25,1.5,1.75,2,3,4,5,10]
+rate_structure = ['ibp']#["fixed","one_tier","ibp","dpb"]
+
+
 
 # define this 'ex[pand-grid' function. Trying to replicaaate expand grid in R
 
@@ -51,18 +46,20 @@ def expandgrid(*itrs):
    return {'Var{}'.format(i+1):[x[i] for x in product] for i in range(len(itrs))}
 
 # give it the lists above and it returns our combos
-parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision,water_cost,price_elasticity)
+parameter_list = expandgrid(drought_characteristics,income_distribution,income_elasticity,fee_passthrough,reservoir_capacity,pay_back_period,discount_rate,mitigation_decision,build_decision,water_cost,price_elasticity,rate_structure,cross_price,cpe_squared)
 parameter_list = pd.DataFrame.from_dict(parameter_list)
-parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision','water_cost','price_elasticity']
+parameter_list.columns = ['drought_characteristic','income_distribution','income_elasticity','fee_passthrough','reservoir_capacity','pay_back_period','discount_rate','mitigation_decision','build_decision','water_cost','price_elasticity','rate_structure','cross_price','cpe_squared']
 
 # remove any 'baseline' or 'improved' which isn't 'none'
 
-#remove_list = (parameter_list['build_decision']=="none") & (parameter_list['mitigation_decision'].isin(['build']))
-#remove_list2 = (parameter_list['mitigation_decision'].isin(['improved','baseline'])) & (parameter_list['build_decision'].isin(['desal','desal','npr','grrp-r','grrp-l','dpr']))
-
+remove_list = (parameter_list['cross_price']==0.013) & (parameter_list['price_elasticity']!=0)
+remove_list2 = (parameter_list['cross_price']==-0.013) & (parameter_list['price_elasticity']==0)
+#remove_list3 = (parameter_list['price_elasticity']==1.06) & (parameter_list['cross_price']==0)
 
 #remove_list3 = (parameter_list['mitigation_decision'].isin(['baseline','improved']) & ((parameter_list['pay_back_period'].isin(['20','40']))|(parameter_list['discount_rate'].isin([1.5,4.5]))))
-#parameter_list = parameter_list[~(remove_list | remove_list2 | remove_list3)]
+parameter_list = parameter_list[~(remove_list | remove_list2)]# | remove_list3 )]
+
+parameter_list.reset_index(drop=True,inplace=True)
 
 # define our relative path base
 repo_home = Path("./").absolute().parents[1]
@@ -70,7 +67,7 @@ repo_home = Path("./").absolute().parents[1]
 # i.e. click 'run' vs running line by line
 
 #  write a dictionary file with all of the parameters in it
-parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' /"parameter_list.csv")
+parameter_list.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments' / 'review_responses2' / "parameter_list.csv")
 
 # below is our simulation
 def sim_function(p):
@@ -125,8 +122,13 @@ def sim_function(p):
     YED = parameter_list['income_elasticity'].iloc[p]
     PED = parameter_list['price_elasticity'].iloc[p] # the mean values of their analysis
 
+    cpe = parameter_list['cross_price'].iloc[p]
+    cpe2 = parameter_list['cpe_squared'].iloc[p]
+
     L.append(["YED: ",YED])
     L.append(["PED: ",PED])
+
+
 
     # read in the input data
     this_file = parameter_list['drought_characteristic'].iloc[p]
@@ -142,14 +144,17 @@ def sim_function(p):
     baseline_demand.columns = ["reporting_month","mean"]
     # units are GPCD`
 
+    # get my baseline demand
+
+
     # scale up seasonality pattern so that residential demand matches
     baseline_demand['mean'] = baseline_demand['mean']*1.32
 
     # initialize my dataframe of outputs
-    outputs = pd.DataFrame(columns=['Date','totalDemand','residentialDemand','otherDemand','northCoast','taitStreet','newellInflow','feltonDiversions','res_drawdown',
+    outputs = pd.DataFrame(columns=['Date','totalDemand','residentialDemand','otherDemand','northCoast','taitStreet','newellInflow','feltonDiversions','res_drawdown','ground',
                                    'level', 'deficit','release','restriction','trigger',
                                    'conserveStatus','fixedCharge','tieredPrices','pedReduction','monthlyCost','monthlyVolumeReduced',
-                                   'unadjusted_demand','build_prod','market_buy'])
+                                   'unadjusted_demand','build_prod','market_buy','infrastructureIncrease','surchargeIncrease'])
 
     outputs['Date'] = pd.to_datetime(input_data['date'],format="%Y-%m-%d", errors = 'coerce')
     outputs['month'] = pd.DatetimeIndex(outputs['Date']).month
@@ -180,7 +185,7 @@ def sim_function(p):
     et = pd.read_csv(repo_home / 'data'/'santa_cruz'/'sc_monthly_et.csv')
 
     # now for my cities
-    city = City(1,YED,61000.01)#
+    city = City(YED,61000.01,cpe,cpe2)
 
     #change reservoir size and set volume
     this_capacity = parameter_list['reservoir_capacity'].iloc[p]
@@ -193,7 +198,7 @@ def sim_function(p):
     #populations = np.array([2365,1648,1456,1285,1424,1027,1018,1077,874,1931,2352,4064,3110,2091,3263,4895])
     populations = np.multiply(populations,33880)
     L.append(["Populations: ",populations])
-
+    income = [7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000]
     # sizes from the get_acs_data script
     #household_sizes = [1.533492 ,1.770660 ,1.727516, 2.583219, 2.342015, 2.953631, 2.050650, 2.170571, 3.291193, 2.528014 ,2.455181, 2.765476, 3.049735 ,2.922616, 2.993665, 3.077490]
     household_sizes = [1.870420, 1.875249, 2.201320, 2.373557 ,2.483636 ,2.583789 ,2.678085, 2.736607, 2.687910 ,2.792010, 2.883071, 2.947434, 3.085348, 3.139869 ,3.206045, 3.180690]
@@ -201,42 +206,110 @@ def sim_function(p):
     L.append(["Household Sizes: ",household_sizes])
     #populations = [ 7652. , 13583., 14923., 21236., 33672., 26211., 33280., 16262.]
     #populations = np.divide(populations,household_sizes)
+    leakages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
-    income = [7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000]
+
+    # now add these to the city object
+    city.set_bins(populations,income,household_sizes,leakages,PED)
+
+
+
+    # define a utility and it's discount rate
+    ut = Utility(parameter_list['discount_rate'].iloc[p])
+
+
+    this_rate_structure = parameter_list['rate_structure'].iloc[p]
+    #["fixed","one_tier","ibp","dpb"]
+    if this_rate_structure == "ibp":
+        # rates from here: https://www.cityofsantacruz.com/government/city-departments/water/monthly-water-costs-calculator
+        base_charge = 11.26 #10.99
+        ut.set_fixed_charge(base_charge)
+
+        ut.set_baseline_fixed_charge(base_charge)
+
+       # ut.set_tier_prices([10.03,11.86,13.78,16.74])
+       # baseline_rates = [10.03,11.86,13.78,16.74]
+        ut.set_tier_prices([10.6,11.58,13.64,16.74])
+        baseline_rates = [10.6,11.58,13.64,16.74]
+        ut.set_tiers([6,2,2,999999])
+        ut.set_baseline_tiers_and_prices([6,2,2,999999],[10.6,11.58,13.64,16.74])
+
+        # now also adjust the income and price elasticity
+        # for IBP the price is -.26, the income is -.36
+        # convention is that negavice is input into the model as a
+        # positive
+
+
+
+    elif this_rate_structure == "fixed":
+
+        base_charge = 74.06
+        ut.set_fixed_charge(base_charge)
+        ut.set_baseline_fixed_charge(base_charge)
+        ut.set_tier_prices([0,0,0,0])
+        baseline_rates = [0,0,0,00]
+        ut.set_tiers([6,2,2,999999])
+        ut.set_baseline_tiers_and_prices([6,2,2,999999],[0,0,0,0])
+
+
+    elif this_rate_structure == "one_tier":
+
+        base_charge = 11.26
+        ut.set_fixed_charge(base_charge)
+        ut.set_baseline_fixed_charge(base_charge)
+        ut.set_tier_prices([10.99])
+        baseline_rates = [10.99]
+        ut.set_tiers([999999])
+        ut.set_baseline_tiers_and_prices([999999],[10.99])
+
+
+    elif this_rate_structure == "dpb":
+
+        base_charge = 11.26
+        ut.set_fixed_charge(base_charge)
+        ut.set_baseline_fixed_charge(base_charge)
+        ut.set_baseline_tiers_and_prices([6,2,2,999999],[11.38,10.4,8.34,5.15])
+        ut.set_tier_prices([11.38,10.4,8.34,5.15])
+
+        baseline_rates = [11.38,10.4,8.34,5.15]
+        ut.set_tiers([6,2,2,999999])
+
+
+    else:
+        print("UNSUPPORTED RATE STRUCTURE")
+
+
+
     income_names = [str(s) for s in income]
+    rev_contrib = pd.DataFrame(0,index=np.arange(0,outputs['Date'].count()),columns=['a'+s for s in income_names] + ['b' + s for s in income_names])
 
     # make the houshold demand dataframe
-    hh_demand = pd.DataFrame(columns=income)
 
-    # hh_bills_columns are actual bills income,
     # the ones with unadjusted anything are raw_income
     # the ones with adjusted rates but not adjusted demand are rateonly_income
     # the ones with unadjusted rates but adjusted demand are demandonly_income
+    # suffixes are _f for fixed, then _1 ... for all the tiers
+    tier_suffixes = ["_f"]
+    tier_suffixes.extend(["_"+str(s+1) for s in range(0,len(ut.tiers))])
     bills_names = copy.copy(income_names)
+    #bills_names.extend([b+s for b in income_names for s in tier_suffixes ])
     bills_names.extend([ "raw_" + s for s in income_names])
+    #bills_names.extend([ "raw_" + b + s for b in income_names for s in tier_suffixes])
     bills_names.extend(["rateonly_" + s for s in income_names])
+    #bills_names.extend([ "rateonly_" + b + s for b in income_names for s in tier_suffixes])
     bills_names.extend( ["demandonly_" + s for s in income_names])
+    #bills_names.extend([ "rateonly_" + b + s for b in income_names for s in tier_suffixes])
+
+    # now do all the above with a 1...5 afterwards
+    suffix_bills = []
+
+
+    demands_names = copy.copy(income_names)
+    demands_names.extend([ "raw_" + s for s in income_names])
+    #demands_names.extend(["adjusted_" + s for s in income_names])
 
     hh_bills  = pd.DataFrame(columns=bills_names)
-
-    leakages = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-
-    # now add these to the city object
-    city.set_bins(populations,income,household_sizes,leakages)
-
-    # define a utility and it's discount rate
-    ut = Utility("utility", parameter_list['discount_rate'].iloc[p])
-    ut.add_option("res1",50,60,60,1000000)
-
-    # rates from here: https://www.cityofsantacruz.com/government/city-departments/water/monthly-water-costs-calculator
-    base_charge = 10.99
-    ut.set_fixed_charge(base_charge)
-
-    ut.set_baseline_fixed_charge(base_charge)
-
-    ut.set_tier_prices([10.03,11.86,13.78,16.74])
-    ut.set_tiers([5,2,2,999999])
-
+    hh_demand = pd.DataFrame(columns=demands_names)
 
     # initialize states
     decision_trigger = False
@@ -249,6 +322,7 @@ def sim_function(p):
     market_buy=0
     build_monthly_cost= 0
     additional_monthly_cost = 0
+    household_cost = 0
     outputs['monthlyCost']=0
     print("Running scenario: ",scenario)
     print("build scenario: ",parameter_list['build_decision'].iloc[p])
@@ -264,7 +338,7 @@ def sim_function(p):
         this_other= other_demand['commercial_industrial'].loc[baseline_demand['reporting_month'].eq(this_month)][this_month-1]
 
         # write the un-messed-with-demand to file
-        outputs.loc[outputs.index==m,'unadjusted_demand']=city.get_utility_demand(this_baseline)/1000000 + this_other
+        outputs.loc[outputs.index==m,'unadjusted_demand']=city.get_utility_demand_no_ped(this_baseline)/1000000 + this_other
 
         # udpate residential demand if it needs to be based on what 'demand_changes' says
         # the demand changes column will perminantly alter demand to 1-(demandchanges*100) *old demand
@@ -286,6 +360,8 @@ def sim_function(p):
             nonres_reduction = 0 # set these to 0 now, and update if we need to.
             # if the previous year was non-zero and this year was 0, this would reset it
 
+            ut.set_tier_prices(baseline_rates)
+
             # in april, we look ahead at the summer demand and the summer
             # water availability
             this_summer_demand =  sum(other_demand['commercial_industrial'].iloc[4:10])
@@ -293,7 +369,7 @@ def sim_function(p):
             summer_res_demand = baseline_demand['mean'].iloc[4:10]
 
             for s in range(6):
-                this_summer_demand = this_summer_demand + city.get_utility_demand(baseline_demand['mean'].iloc[s])/1000000
+                this_summer_demand = this_summer_demand + city.get_utility_demand(baseline_demand['mean'].iloc[s],ut)/1000000
 
             # the result is the total amount of water we need over this summer in MG
 
@@ -336,12 +412,17 @@ def sim_function(p):
                         outputs.loc[outputs.index==m,'conserveStatus'] = ideal_reduction_fraction
                         # RES REDUCTION HAS TO REMAIN THIS UNTIL OCTOBER
 
-                        outputs.loc[outputs.index==m,'monthlyVolumeReduced'] =  (city.get_utility_demand(this_baseline)-city.get_utility_demand(this_baseline*(1-res_reduction)))/1000000
+                        outputs.loc[outputs.index==m,'monthlyVolumeReduced'] =  (city.get_utility_demand_no_ped(this_baseline)-city.get_utility_demand_no_ped(this_baseline*(1-res_reduction)))/1000000
                         yearly_cost_of_conservation = ut.calculate_cost_of_conservation_EVEN_by_household(res_reduction, city,baseline_demand)
+                        # calculate cost even used to also output: ,yearly_tier_use_baseline, yearly_tier_use_adjusted
+                        # they are used for calculating different rates
+
                         additional_monthly_cost = yearly_cost_of_conservation/12
                         outputs.loc[m:(m+11),'monthlyCost']= outputs.loc[m:(m+11),'monthlyCost'] + yearly_cost_of_conservation/12
-
                         update_rates = True
+
+                        # write the reduction to an output file
+                        #rev_contrib.loc[m]=pd.array(ut.calculate_contribution_from_each_household(res_reduction,city,baseline_demand))
 
                     elif this_mitigation_decision =="market":
                         res_reduction=0
@@ -375,35 +456,6 @@ def sim_function(p):
                  #ut.set_fixed_charge(base_charge)
                  #print('ending conservation: ',this_date)
 
-        # read from input file to determine what decisions we are making
-        # this only happens if we are conserving. THIS DOES NOT GET CALLED IF WE BUILD because the
-        # build column in sc_decisions is all 0s
-
-        # Below is the old code which picked the stages
-        # if (decisions['conserve_stage'].iloc[m]!=decisions['conserve_stage'].iloc[m-1]):
-
-        #     update_rates = True
-        #     this_decision = decisions['conserve_stage'].iloc[m]
-        #     this_conservation = conservation_policies.iloc[this_decision]
-
-        #     # the conservaation happens in the 'conservation_fraction' value
-        #     outputs.loc[outputs.index==m,'conserveStatus'] = this_conservation['res_reductions']
-        #     res_reduction = this_conservation['res_reductions']/100
-        #     nonres_reduction = this_conservation['other_reductions']/100
-
-        #     # now calculate lost revenue from the reduction
-        #     # calculate the volume needed
-
-        #     #volume_reduced = (res_reduction)*(this_baseline)#+((1-nonres_reduction)*this_other)
-        #     outputs.loc[outputs.index==m,'monthlyVolumeReduced'] =  (city.get_utility_demand(this_baseline)-city.get_utility_demand(this_baseline*(1-res_reduction)))/1000000
-        #     # Reduction in MG/month
-
-        #     yearly_cost_of_conservation = ut.calculate_cost_of_conservation_EVEN_by_household(res_reduction, city,baseline_demand)
-        #     additional_monthly_cost = yearly_cost_of_conservation/12
-
-        #     outputs.loc[outputs.index==m,'annualRevenueLost']=yearly_cost_of_conservation
-
-
         if (parameter_list['build_decision'].iloc[p]!="none") and (m ==0):
 
             # if we build, update the supplies right away, increase the rates
@@ -421,6 +473,12 @@ def sim_function(p):
 
 
                 build_production = 76.03 # unit is MG/month
+                total_cost = 115000000
+                additional_annual_cost =3300000
+
+            elif this_build_decision =='desal_old':
+
+                build_production = 0 # unit is MG/month
                 total_cost = 115000000
                 additional_annual_cost =3300000
 
@@ -473,56 +531,109 @@ def sim_function(p):
                 #if(res_reduction !=0):
                 ut.set_fixed_charge(base_charge+ build_monthly_cost/city.counts.sum() + household_cost)
 
-                #WHERE I AM: fix it so that scenario 8 goes back to normal again
-
-                #divide costs up into build fixed costs and variable fixed costs (market/conservation)
-
-                #ALSO fix issue where costs are all positive for conservation
-                #in non-basleiine scenarios?
-
-                #lif parameter_list['build_decision'].iloc[p]!="none":
-                #    ut.set_fixed_charge(ut.fixed_charge+ household_cost)
-
-            #else:
-                #ut.set_fixed_charge(base_charge)
-                #percentage_change_quantity = 0
+                outputs.loc[m:,'infrastructureIncrease'] = build_monthly_cost/city.counts.sum()
+                outputs.loc[m:,'surchargeIncrease'] = household_cost
 
 
-            elif this_fee_passthrough == "high_threshold":
-                print("high threshold passthrough")
-                #increase the volumetric charge for households above 5CCF
-                # in other work it' 8CCF, but this is more suited to the lower
-                # residential water use in Santa Cruz
 
-                #(1) figure out how much water is being used in those tiers
-                high_threshold_cutoff = 5 # PARAMETER TO SET
-                total_water_use_above_threshold = list()
-                for h in range(len(baseline_demand['mean'])):
-                    household_demands = (city.get_total_household_demands(baseline_demand['mean'].iloc[h])/748)-high_threshold_cutoff
+            elif this_fee_passthrough == "one_tier":
+                print("one tier passthrough")
 
-                    # Multiply by the number of households
-                    total_household_demands = np.multiply(household_demands,city.counts)
+                toss_out,yearly_tier_use_baseline, yearly_tier_use_adjusted = ut.calculate_cost_of_conservation_EVEN_by_household(res_reduction, city,baseline_demand)
+                # also get an updated tier use
+                tier_use = yearly_tier_use_baseline / 748
+                tier_use_reduced = yearly_tier_use_adjusted/748
+                # this unit is CCFs
 
-                    # remove any negatives and then multiply
-                    total_water_use_above_threshold.append(total_household_demands[total_household_demands>0].sum())
+                # calculate the fixed, variable and total revenue before
+                original_fixed_revenue = city.counts.sum()*ut.fixed_charge*12
+                original_variable_revenue = np.dot(tier_use,ut.prices)
+                original_total_revenue =original_fixed_revenue+original_variable_revenue
 
-                #(2) Divide the total cost by the volume of water and add hat to the upper
-                # tier prices. This will likely provide less revenue because we are assuming
-                # it's used across the board.
-                volumetric_increase = additional_monthly_cost/np.array(total_water_use_above_threshold).sum()
+                # after fixed is the same, so caculate the variable and total revenue after curtailment
+                after_variable_revenue = np.dot(tier_use_reduced,ut.prices)
+                after_total_revenue = original_fixed_revenue + after_variable_revenue
 
-                #
-                # for testing: 5313810.667 is the amount of annual revenue lost
-                # in a 15% drought
-                # divide this by 3 and add it to the volumetric rates
-                ut.set_tier_prices([10.03,11.86+volumetric_increase/3,13.78+volumetric_increase/3,16.74+volumetric_increase/3])
+                # what %age of after-curtailment variable revenue are we getting?
+                variable_percentage_after = after_variable_revenue/(after_total_revenue)
+
+                # get the total amount of revenue we need
+                revenue_recovery = original_total_revenue-after_total_revenue
+
+                # if we assume the after-curtailment %ages are the same, how much
+                # revenue needs to come from fixed vs volume?
+
+                fixed_revenue_recovery = revenue_recovery*(1-variable_percentage_after)
+                variable_revenue_recovery = revenue_recovery*variable_percentage_after
+
+                # calculate the fixed charge increase
+                household_cost = fixed_revenue_recovery / city.counts.sum()/12
+                ut.set_fixed_charge(base_charge+ build_monthly_cost/city.counts.sum() + household_cost)
+                outputs.loc[m:,'surchargeIncrease'] = household_cost
+
+                # calculate the tier increases
+                tier_increase = variable_revenue_recovery/tier_use_reduced[0]
+
+                #make the adjustment
+                prices = ut.prices
+                prices[0] = prices[0]+ tier_increase
+
+                ut.set_tier_prices(prices)
+                outputs.loc[outputs.index==m,'tieredPrices']=str(prices)
+
+            elif this_fee_passthrough == "multi_tier":
+                print("multi-tier passthrough")
+
+                # moreor less redo this but pass on all fees to higher(ad hoc) tiers
+                toss_out,yearly_tier_use_baseline, yearly_tier_use_adjusted = ut.calculate_cost_of_conservation_EVEN_by_household(res_reduction, city,baseline_demand)
+
+                # also get an updated tier use
+                tier_use = yearly_tier_use_baseline / 748
+                tier_use_reduced = yearly_tier_use_adjusted/748
+
+                # calculate the fixed, variable and total revenue before
+                original_fixed_revenue = city.counts.sum()*ut.fixed_charge*12
+
+                original_variable_revenue = np.multiply(tier_use,ut.prices)
+                original_total_revenue =original_fixed_revenue+original_variable_revenue.sum()
+
+                # after fixed is the same, so caculate the variable and total revenue after curtailment
+                after_variable_revenue = np.multiply(tier_use_reduced,ut.prices)
+                after_total_revenue = original_fixed_revenue + after_variable_revenue.sum()
+
+                # what %age of after-curtailment variable revenue are we getting?
+                fixed_percentage_after = original_fixed_revenue/(after_total_revenue)
+
+                variable_percentages_after = after_variable_revenue/(after_total_revenue)
+
+                # get the total amount of revenue we need
+                revenue_recovery = original_total_revenue-after_total_revenue
+
+                # if we assume the after-curtailment %ages are the same, how much
+                # revenue needs to come from fixed vs volume?
+
+                fixed_revenue_recovery = revenue_recovery*(1-variable_percentages_after.sum())
+                variable_revenue_recovery = revenue_recovery*variable_percentages_after
+
+                # calculate the fixed charge increase
+                household_cost = fixed_revenue_recovery / city.counts.sum()/12
+                ut.set_fixed_charge(base_charge+ build_monthly_cost/city.counts.sum() + household_cost)
+                outputs.loc[m:,'surchargeIncrease'] = household_cost
+
+                # calculate the tier increases
+                tier_increase = np.divide(variable_revenue_recovery,tier_use_reduced)
+                tier_increase = np.nan_to_num(tier_increase)
+
+                #make the adjustment
+                prices = ut.prices
+                prices = prices+ tier_increase
+
+                ut.set_tier_prices(prices)
+                outputs.loc[outputs.index==m,'tieredPrices']=str(prices)
 
 
-            elif this_fee_passthrough == "income_threshold":
-                print("high threshold passthrough")
-                # increase the charge for only households making lots of money
-                # TODO: this is going to require changing the way we calculate
-                # rates and is a slightly more involved process
+                # same as above, but also write some code which calculates the %ages
+                # from the given rates
 
             else:
                 print("unrecgonized fee passthrough parameter on parameter list line", p)
@@ -531,59 +642,49 @@ def sim_function(p):
         # regardless of what we've done, record the bill structure
         outputs.loc[outputs.index==m,'fixedCharge']=ut.fixed_charge
         #outputs.loc[outputs.index==m,'tieredPrices']=ut.prices
+
         #TODO: write the tiers. Requires making 3 new columns
         outputs.loc[outputs.index==m,'conserveStatus'] = res_reduction
 
         update_rates = False
 
-        # if outputs['fixedCharge'].iloc[m] > outputs['fixedCharge'].iloc[m-1] and m> 0:
-        #     print("inpedloop")
-        #     # we only do this when the charge goes up, not when it goes     down,
-        #     # because that amount is incorperated into the rebound which is calculated
-        #     # seperately
-        #     # this means we updated the fixed charge above
-        #     # so we have to update the demand based on that
-        #     fixed_charge_difference = outputs['fixedCharge'].iloc[m] - outputs['fixedCharge'].iloc[m-1]
-        #     #print("fixed charge diff: ",fixed_charge_difference)
-        #     ped_class_demands = city.get_total_household_demands(this_baseline)
-        #     mean_demand = ped_class_demands.mean()
-        #     #print("mean demand: ",mean_demand)
-        #     percentage_change_price = fixed_charge_difference/ut.get_bill(mean_demand/748)
-        #     #print("bill is: $",ut.get_bill(mean_demand/748))
-        #     percentage_change_quantity = PED*percentage_change_price
-        # else:
-        #     percentage_change_quantity=0
-        #     #print("%age change quantity: ",percentage_change_quantity)
 
-        # trying a new mechanism for PED:
-        # here, we will compute eveyrhting compared to the basline bill for the
-        # given month. The result is that percentage_change_quantity gets updated
-        # every time.
+        # for each class, calculate the bill difference
+        #ped_class_demands = city.get_class_demands(this_baseline)
+        #perc_change_price = []
+        #for this_demand in ped_class_demands:
+
+        #    this_bill_change = ut.get_bill(this_demand/748)-ut.get_baseline_bill(this_demand/748)
+        #    perc_change_price.append(this_bill_change/ut.get_baseline_bill(this_demand/748))
 
         # first compute baseline price
-        ped_class_demands = city.get_total_household_demands(this_baseline)
-        mean_demand = ped_class_demands.mean()
 
-        bill_difference = ut.get_bill(mean_demand/748)-ut.get_baseline_bill(mean_demand/748)
 
-        percentage_change_price = bill_difference/ut.get_baseline_bill(mean_demand/748)
-        print("perc change price: ",percentage_change_price)
-        percentage_change_quantity = PED*percentage_change_price
+        #ped_class_demands = city.get_total_household_demands(this_baseline)
+        #mean_demand = ped_class_demands.mean()
 
+       # bill_difference = ut.get_bill(mean_demand/748)-ut.get_baseline_bill(mean_demand/748)
+
+       # percentage_change_price = bill_difference/ut.get_baseline_bill(mean_demand/748)
+
+
+        #percentage_change_quantity = np.multiply(PED,perc_change_price)
 
         # now make adjustments based on conservation, and price changes
-        adjusted_baseline = this_baseline*(1-res_reduction)*(1-percentage_change_quantity)
+        adjusted_baseline = this_baseline*(1-res_reduction)#*(1-percentage_change_quantity)
+        percentage_change_demand = (city.get_utility_demand_no_ped(adjusted_baseline)-city.get_utility_demand(adjusted_baseline, ut))/city.get_utility_demand_no_ped(adjusted_baseline) *100
+        print("perc change price: ",percentage_change_demand)
 
         # calculate my other demand
         adjusted_other = this_other*(1-nonres_reduction)
 
-        outputs.loc[outputs.index==m,'pedReduction'] = percentage_change_quantity
-        ut.demand = city.get_utility_demand(adjusted_baseline)/1000000 + adjusted_other
+        outputs.loc[outputs.index==m,'pedReduction'] = percentage_change_demand
+        ut.demand = city.get_utility_demand(adjusted_baseline,ut)/1000000 + adjusted_other
         # this is setting the utility demand in MG
 
         # write the demand
         outputs.loc[outputs.index==m,'totalDemand'] = ut.demand
-        outputs.loc[outputs.index==m,'residentialDemand'] = city.get_utility_demand(this_baseline)/1000000
+        outputs.loc[outputs.index==m,'residentialDemand'] = city.get_utility_demand(this_baseline,ut)/1000000
         outputs.loc[outputs.index==m,'otherDemand'] = this_other
 
         # for this particular month, here are our inflows
@@ -646,52 +747,39 @@ def sim_function(p):
                 outputs.loc[outputs.index==m,'market_buy']=market_buy
                 outputs.loc[outputs.index==m,'monthlyCost'] = outputs.loc[outputs.index==m,'monthlyCost']  + market_buy*market_cost
 
-                # increase the bills also
-                ut.set_fixed_charge(base_charge+ build_monthly_cost/city.counts.sum() + (market_buy*market_cost)/city.counts.sum())
+                if this_fee_passthrough=="zero_threshold" :
+                    # increase the bills also
+                    ut.set_fixed_charge(base_charge+ build_monthly_cost/city.counts.sum() + (market_buy*market_cost)/city.counts.sum())
 
-                print("buying: ",market_buy," mg of water on the market at a cost of $",market_buy*market_cost)
+                    print("buying: ",market_buy," mg of water on the market at a cost of $",market_buy*market_cost)
+                    outputs.loc[outputs.index==m,'fixedCharge']= ut.fixed_charge
+                    #outputs.loc[m,'monthlyCost']= outputs.loc[m ,'monthlyCost']+ market_buy*market_cost
+                    outputs.loc[m:,'surchargeIncrease'] =  (market_buy*market_cost)/city.counts.sum()
+                elif this_fee_passthrough=="high_threshold":
 
-                outputs.loc[m,'monthlyCost']= outputs.loc[m ,'monthlyCost']+ market_buy*market_cost
+                    tier_use = city.get_tier_demands(this_baseline,ut)/748
+                    tier_use_reduced = city.get_tier_demands(this_baseline*(1-res_reduction),ut)/748
 
-        # first write a abseline bill, this is assuming res_reduction = 0 and the bill is normal
-        baseline_class_demands = city.get_total_household_demands(this_baseline)
-        baseline_class_bills = []
-        previous_fixed_charge = ut.fixed_charge
-        ut.set_fixed_charge(base_charge)
+                    # so right now, we know how much is being used by each tier
+                    old_tier=ut.prices[1]
 
-        reduced_class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction)*(1-percentage_change_quantity))
-        reduced_class_normal_bill = []
-        for c in baseline_class_demands:
-            baseline_class_bills.append(ut.get_bill(c/748))
+                    new_tier = (market_buy*market_cost-ut.prices[2]*tier_use_reduced[2]+ut.prices[2]*tier_use[2]+ut.prices[1]*tier_use[1])/tier_use_reduced[1]
+                    #new_tier = (market_buy*market_cost+(tier_use[1]*old_tier))/(tier_use_reduced[1])
 
-        for c in reduced_class_demands:
-            reduced_class_normal_bill.append(ut.get_bill(c/748))
 
-        # now adjust the fixed charge back and use the non-adjusted demand
-        ut.set_fixed_charge(previous_fixed_charge)
-        baseline_class_adjusted_bill = []
-        for c in baseline_class_demands:
-            baseline_class_adjusted_bill.append(ut.get_bill(c/748))
+                    ut.set_tier_prices([10.03,new_tier,13.78,16.74])
+                    outputs.loc[outputs.index==m,'tieredPrices']=new_tier
 
-        # write the bills
-        #Record demand for an average house from each class
-        # update demand
-        class_demands = city.get_total_household_demands(this_baseline*(1-res_reduction)*(1-percentage_change_quantity))
-        hh_demand.loc[m] = class_demands
 
-        #print("fixed: ",ut.fixed_charge)
-        # get the bills for each
-        class_bills = []
-        for c in class_demands:
-            class_bills.append(ut.get_bill(c/748))
-            # this is writing the bills for each income class assuming we've made all the changes
+        # first write a abseline bill, this is assuming res_reduction = 0 and the bill is normalo
 
-        this_bills = []
-        this_bills.extend(class_bills)
-        this_bills.extend(baseline_class_bills)
-        this_bills.extend(baseline_class_adjusted_bill)
-        this_bills.extend(reduced_class_normal_bill)
+        this_bills = ut.calculate_hh_bills(this_baseline,res_reduction,percentage_change_quantity,city)
         hh_bills.loc[m] = this_bills
+
+        # do the same for demands. Order is final,raw,mand,ped
+        this_demands = ut.calculate_hh_demand(this_baseline,res_reduction,percentage_change_quantity,city)
+
+        hh_demand.loc[m] = this_demands
 
         # check to see if we are withdrawing more than the reservoir amount
         # simulate them going into the reservoir
@@ -712,6 +800,7 @@ def sim_function(p):
         outputs.loc[outputs.index==m,'deficit'] = this_deficit
 
 
+
     paramstring = str(parameter_list.index[p]) + "_params.txt"
     # record the outputs
     with open(repo_home / 'outputs'/'santa_cruz'/'experiments'/ paramstring,"w") as filehandle:
@@ -720,10 +809,11 @@ def sim_function(p):
     outstring = str(parameter_list.index[p]) + "_outputs.csv"
     hhdstring = str(parameter_list.index[p]) + "_hh_demand.csv"
     hhbstring = str(parameter_list.index[p]) + "_hh_bills.csv"
+    revstring = str(parameter_list.index[p]) + "_rev_contribs.csv"
 
-    outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ outstring)
-    hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhdstring)
-    hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ hhbstring)
-
+    outputs.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ 'review_responses2'/ outstring)
+    hh_demand.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ 'review_responses2'/hhdstring)
+    hh_bills.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ 'review_responses2' /hhbstring)
+    rev_contrib.to_csv(repo_home / 'outputs'/'santa_cruz'/ 'experiments'/ 'review_responses2' /revstring)
 # now multiprocess it
 Parallel(n_jobs=num_cores)(delayed(sim_function)(i) for i in tqdm(range(0,max(parameter_list.index)+1)))

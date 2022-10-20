@@ -9,6 +9,7 @@ options(scipen=999)
 load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data_plot3.Rdata")
 og_outputs <- outputs
 elasticities_values <- unique(outputs$price_elasticity)
+elasticities_values <- elasticities_values[2]
 
 for (ela in elasticities_values){
   outputs <- og_outputs[which(og_outputs$price_elasticity==ela),]
@@ -18,6 +19,7 @@ for (ela in elasticities_values){
   # Now make some figures
   library(reshape2)
   library(ggplot2)
+  library(ggrepel)
   
   # going to melt the responses 
   outputs_totals <- outputs[,c(1:12,44:48,161:165)] #these are ad-hoc columns to just get the total bill changes by parameter
@@ -63,8 +65,9 @@ for (ela in elasticities_values){
     geom_bar_pattern(data=outputs_p1,aes(x=build_decision,y=annual_bill_change,fill=build_decision,pattern=mitigation_decision),stat='identity',position=position_dodge(),color="black") +
     facet_grid(rows=vars(drought_characteristic),cols=vars(income_group),scales="free_x") + theme_bw()  + scale_pattern_manual(values=c(market="none",baseline='circle'))+
     scale_fill_npg() +geom_hline(yintercept = 0)+labs(x="",y="Total Bill Change", pattern="Mitigation decision",fill="Infrastructure")+
-    scale_x_discrete(limits=build_order)+ geom_text(data=outputs_p1,aes(label=label,x=build_decision,y=annual_bill_change,group=mitigation_decision),position=position_dodge(width=0.8))
-  #p1
+    scale_x_discrete(limits=build_order)+ geom_text(data=outputs_p1,aes(label=label,x=build_decision,y=annual_bill_change,group=mitigation_decision),position=position_dodge(width=0.8))+
+    geom_label_repel(data=outputs_p1,aes(y=annual_bill_change,label=annual_bill_change,x=build_decision,fill=build_decision))
+  p1
   
   p1_tc <- ggplot()+ geom_bar_pattern(data=outputs_p1_tc,aes(x=build_decision,y=annual_bill_change,fill=build_decision,pattern=mitigation_decision),stat='identity',position='dodge',color="black") +
     facet_grid(rows=vars(drought_characteristic),cols=vars(income_group),scales="free_x") + theme_bw()  + scale_pattern_manual(values=c(market="none",baseline='circle'))+
@@ -81,7 +84,7 @@ for (ela in elasticities_values){
   p1_DMDU <- plot_grid(p1_leg,p1_no_leg,p1_tc_no_leg,nrow=1,rel_widths = c(.5,2,1.3),align = "v",axis = 'tb')
   p1_DMDU <- plot_grid(title,p1_DMDU,nrow=2,align="h",rel_heights = c(.05,1))
   print(ela)
-  ggsave(p1_DMDU,filename = paste0("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/figure_2_plots/draft_figure_2_TOTAL",ela,".png"),width=8,height=4,unit="in",scale=1.25)
+  #ggsave(p1_DMDU,filename = paste0("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/figure_2_plots/draft_figure_2_TOTAL",ela,".png"),width=8,height=4,unit="in",scale=1.25)
   
   
   # i want insets on all sides showing the differences

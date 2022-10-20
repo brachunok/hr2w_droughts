@@ -1,6 +1,6 @@
 #analyze_outputs
 library(plyr)
-load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/processed_bill_data_plot8.Rdata")
+load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/processed_plot_responses2.Rdata")
 
 # figure out our 'baseline' values for each, and what row that will be
 # take only the unique parameters (not DVs) and then find all the rows
@@ -8,7 +8,7 @@ load("~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/sc/processed_bi
 
 # get rid of anyhing without 30 yr pbp and 3% interest
 processed <- processed[which(processed$pay_back_period==30&processed$discount_rate==3),]
-unique_params <- unique(processed[,c(2:8,11,12)])
+unique_params <- unique(processed[,c(2:8,11,12,13,14,15)]) # remember you have to change this if we add new stuff
 
 incomes <- c(7500,12500,17500,22500,27500,32500,37500,42500,47500,55000,67500,87500,112500,137500,175000,250000)
 deep_poverty <- paste0(incomes[1:3]) # 18000
@@ -55,7 +55,7 @@ outputs$upper_class_max_avg <- NA
 for(i in 1:nrow(unique_params)){
   
   this_param <- unique_params[i,]
-  this_matching <- match_df(x=processed, y=this_param,on=colnames(processed)[c(2:8,11,12)])
+  this_matching <- match_df(x=processed, y=this_param,on=colnames(processed)[c(2:8,11,12,13,14,15)])
   
   # get baseline row
   baseline_row <- which(this_matching$mitigation_decision=="baseline"&this_matching$build_decision=="none")
@@ -179,7 +179,7 @@ outputs$near_poverty_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0
 outputs$middle_class_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",middle_class)])
 outputs$upper_class_perc_total <- rowMeans(outputs[,colnames(outputs)%in%paste0("A_max_perc_",upper_class)])
 
-save(outputs,file = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data_plot8.Rdata")
+save(outputs,file = "~/Documents/__college/reseach_stuff/hr2w_droughts/analysis/processed_and_binned_bill_data_plot_responses2.Rdata")
 
 # # Now make some figures
 # library(reshape2)
